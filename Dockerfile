@@ -5,7 +5,9 @@
 FROM node:20-slim AS frontend
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+# npm install (not `ci`) tolerates a lockfile written by a newer npm than the
+# image's; fine for this app.
+RUN npm install --no-audit --no-fund
 COPY frontend/ ./
 RUN npm run build            # vite build (mode=production → base '/static/')
 
