@@ -1,0 +1,18 @@
+# keep the Docker build context small — only backend/ + frontend/ source
+**/venv/
+**/node_modules/
+**/__pycache__/
+**/*.py[cod]
+backend/.env
+backend/staticfiles/
+backend/*.sqlite3
+frontend/dist/
+.git/
+
+# large data dumps / migration artifacts — never needed in the image
+*.sql
+*.dmp
+*.log
+restore/
+cloud/
+scratchpad/

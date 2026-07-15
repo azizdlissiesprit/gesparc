@@ -1,0 +1,26 @@
+# Render Blueprint — deploy GesParc as one free Docker web service.
+# In Render: New > Blueprint > pick this repo. You'll be prompted for the
+# `sync: false` secrets (PG_DSN, BASIC_AUTH_USER/PASS). CSRF_TRUSTED_ORIGINS
+# can be set to your final URL after the first deploy (e.g. https://gesparc.onrender.com).
+services:
+  - type: web
+    name: gesparc
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health/
+    envVars:
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true          # Render generates a strong secret
+      - key: DJANGO_ALLOWED_HOSTS
+        value: ".onrender.com"       # matches any *.onrender.com subdomain
+      - key: PG_DSN
+        sync: false                  # paste your Neon connection string
+      - key: BASIC_AUTH_USER
+        sync: false                  # the shared login username
+      - key: BASIC_AUTH_PASS
+        sync: false                  # the shared login password
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false                  # e.g. https://gesparc.onrender.com (set after first deploy)

@@ -1,0 +1,30 @@
+# --- secrets ---
+.env
+backend/.env
+*.env
+!backend/.env.example
+
+# --- python ---
+**/venv/
+**/__pycache__/
+*.py[cod]
+backend/staticfiles/
+*.sqlite3
+
+# --- node / build output ---
+**/node_modules/
+frontend/dist/
+
+# --- large DB dumps & migration artifacts (must NOT go to GitHub) ---
+*.sql
+*.dmp
+*.log
+restore/
+dump_gesparc.sql
+schemadump2.sql
+cloud/*.dmp
+cloud/*.sql
+
+# --- misc ---
+.DS_Store
+*.local

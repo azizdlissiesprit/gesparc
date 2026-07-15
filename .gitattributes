@@ -1,0 +1,6 @@
+# Normalize line endings to LF in the repo (keeps the Dockerfile & shell
+# commands valid on the Linux build/runtime host).
+* text=auto eol=lf
+*.png binary
+*.svg text
+*.ico binary
