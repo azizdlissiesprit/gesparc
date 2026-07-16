@@ -28,6 +28,7 @@ import FournisseursPage from './pages/FournisseursPage'
 import SinistresPage from './pages/SinistresPage'
 import ExploitationPage from './pages/ExploitationPage'
 import CarburantPage from './pages/CarburantPage'
+import TaxesCirculationPage from './pages/TaxesCirculationPage'
 import Placeholder from './pages/Placeholder'
 
 const { Header, Sider, Content } = Layout
@@ -142,6 +143,7 @@ export default function App() {
             <Route path="/assurances" element={<SinistresPage />} />
             <Route path="/exploitation" element={<ExploitationPage />} />
             <Route path="/carburant" element={<CarburantPage />} />
+            <Route path="/taxes" element={<TaxesCirculationPage />} />
             <Route path="*" element={<Placeholder />} />
           </Routes>
         </Content>

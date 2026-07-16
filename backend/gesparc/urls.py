@@ -14,6 +14,8 @@ urlpatterns = [
         views.visite_technique_stats,
         name="visite-stats",
     ),
+    path("taxes-circulation/", views.taxe_circulation_list, name="taxe-list"),
+    path("taxes-circulation/stats/", views.taxe_circulation_stats, name="taxe-stats"),
     path("reformes/", views.reforme_list, name="reforme-list"),
     path("reformes/stats/", views.reforme_stats, name="reforme-stats"),
     path("demandes/", views.demande_list, name="demande-list"),

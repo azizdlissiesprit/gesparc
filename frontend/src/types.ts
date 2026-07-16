@@ -101,6 +101,38 @@ export interface VisiteStats {
   montant_total: number | null
 }
 
+export interface TaxeCirculation {
+  id: string
+  num_plaque: string | null
+  num_veh: string
+  num_struct: string | null
+  structure: string | null
+  nature_code: number | null
+  nature: string | null
+  montant: number | null
+  date_debut: string | null
+  date_fin: string | null
+  quittance: string | null
+  statut: ValidityStatut
+}
+
+export interface TaxeQuery {
+  search?: string
+  num_struct?: string
+  nature?: number
+  statut?: ValidityStatut
+  page?: number
+  page_size?: number
+}
+
+export interface TaxeStats {
+  total: number
+  expirees: number
+  bientot: number
+  valides: number
+  montant_total: number | null
+}
+
 export type ReformeStatut = 'vendu' | 'non_vendu'
 
 export interface ReformeLigne {

@@ -77,6 +77,24 @@ def visite_technique_stats(request: Request) -> Response:
 
 
 @api_view(["GET"])
+def taxe_circulation_list(request: Request) -> Response:
+    data = queries.list_taxes_circulation(
+        search=request.query_params.get("search") or None,
+        num_struct=request.query_params.get("num_struct") or None,
+        nature=_int_param(request, "nature"),
+        statut=request.query_params.get("statut") or None,
+        page=_int_param(request, "page", 1),
+        page_size=_int_param(request, "page_size", 20),
+    )
+    return Response(data)
+
+
+@api_view(["GET"])
+def taxe_circulation_stats(request: Request) -> Response:
+    return Response(queries.taxes_circulation_stats())
+
+
+@api_view(["GET"])
 def reforme_list(request: Request) -> Response:
     data = queries.list_reformes(
         search=request.query_params.get("search") or None,
@@ -332,4 +350,6 @@ def lookups(request: Request, name: str) -> Response:
         return Response(queries.exploitation_annees())
     if name == "carburant-annees":
         return Response(queries.carburant_annees())
+    if name == "taxe-natures":
+        return Response(queries.lookup_taxe_natures())
     return Response({"detail": f"Lookup inconnu: {name}"}, status=404)

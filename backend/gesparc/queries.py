@@ -332,6 +332,96 @@ def visites_techniques_stats() -> dict[str, Any]:
     return row or {}
 
 
+# ---- Taxes de circulation --------------------------------------------------
+# The circulation-tax natures in FRAIS_DIVERS (per the NAT_FD column comment:
+# 1 = Vignette, 2 = Taxe de circulation, 3 = Assurance, 4 = Visite technique).
+# This module covers the two road-tax natures; VT has its own module.
+TAXE_NATURE_LABELS = {1: "Vignette", 2: "Taxe de circulation"}
+
+_TAXE_BASE = """
+SELECT v.num_plaque                                     AS num_plaque,
+       fd.num_veh                                       AS num_veh,
+       v.num_struct                                     AS num_struct,
+       s.designation                                    AS structure,
+       fd.nat_fd                                        AS nature_code,
+       fd.montant                                       AS montant,
+       fd.date_fd                                       AS date_debut,
+       fd.date_valid_fd                                 AS date_fin,
+       fd.quittance                                     AS quittance,
+       concat(fd.num_veh, '_', fd.nat_fd, '_', TO_CHAR(fd.date_fd, 'YYYYMMDD')) AS id,
+       CASE
+           WHEN fd.date_valid_fd IS NULL THEN 'inconnu'
+           WHEN fd.date_valid_fd < CURRENT_DATE THEN 'expiree'
+           WHEN fd.date_valid_fd < CURRENT_DATE + 30 THEN 'bientot'
+           ELSE 'valide'
+       END                                              AS statut
+FROM frais_divers fd
+JOIN vehicule v ON v.num_veh = fd.num_veh
+LEFT JOIN structure s ON s.num_struct = v.num_struct
+"""
+
+
+def _decorate_taxe(row: dict[str, Any]) -> dict[str, Any]:
+    code = row.get("nature_code")
+    row["nature"] = TAXE_NATURE_LABELS.get(int(code), code) if code is not None else None
+    return row
+
+
+def list_taxes_circulation(
+    *,
+    search: str | None = None,
+    num_struct: str | None = None,
+    nature: int | None = None,
+    statut: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> dict[str, Any]:
+    where = ["fd.nat_fd IN (1, 2)"]
+    params: dict[str, Any] = {}
+    if search:
+        where.append(
+            "(UPPER(v.num_plaque) LIKE :search OR UPPER(s.designation) LIKE :search)"
+        )
+        params["search"] = f"%{search.upper()}%"
+    if num_struct:
+        where.append("v.num_struct = :num_struct")
+        params["num_struct"] = num_struct
+    if nature is not None:
+        where.append("fd.nat_fd = :nature")
+        params["nature"] = nature
+    if statut in _STATUT_CONDS:
+        where.append(f"({_STATUT_CONDS[statut]})")
+
+    base = _TAXE_BASE + " WHERE " + " AND ".join(where)
+    result = oracle.paginate(
+        base, params, page=page, page_size=page_size,
+        order_by="date_fin DESC NULLS LAST",
+    )
+    result["results"] = [_decorate_taxe(r) for r in result["results"]]
+    return result
+
+
+def taxes_circulation_stats() -> dict[str, Any]:
+    row = oracle.fetch_one(
+        """
+        SELECT COUNT(*) AS total,
+               SUM(CASE WHEN fd.date_valid_fd < CURRENT_DATE THEN 1 ELSE 0 END) AS expirees,
+               SUM(CASE WHEN fd.date_valid_fd >= CURRENT_DATE
+                         AND fd.date_valid_fd < CURRENT_DATE + 30 THEN 1 ELSE 0 END) AS bientot,
+               SUM(CASE WHEN fd.date_valid_fd >= CURRENT_DATE + 30 THEN 1 ELSE 0 END) AS valides,
+               SUM(fd.montant) AS montant_total
+        FROM frais_divers fd
+        JOIN vehicule v ON v.num_veh = fd.num_veh
+        WHERE fd.nat_fd IN (1, 2)
+        """
+    )
+    return row or {}
+
+
+def lookup_taxe_natures() -> list[dict]:
+    return [{"value": k, "label": v} for k, v in TAXE_NATURE_LABELS.items()]
+
+
 # ---- Réformes (vehicle decommissioning) ------------------------------------
 # LIGNE_REFORME holds one row per reformed vehicle (linked to a REFORME header
 # by NUM_REF). A line is "vendu" once DATE_SORTIE_COMPTES (removal from the
