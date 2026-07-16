@@ -950,6 +950,95 @@ def get_ordre_mission(num_om: int) -> dict[str, Any] | None:
     return row
 
 
+# ---- Fournisseurs (référentiel) --------------------------------------------
+FOURN_STATUT_LABELS = {"actif": "Actif", "bloque": "Bloqué"}
+
+_FOURN_LIST_BASE = """
+SELECT num_fourn            AS code,
+       designation          AS designation,
+       activite             AS activite,
+       adresse              AS adresse,
+       tel                  AS tel,
+       email                AS email,
+       COALESCE(bloque, 0)  AS bloque
+FROM fournisseur
+"""
+
+
+def _decorate_fourn(row: dict[str, Any]) -> dict[str, Any]:
+    row["statut"] = "Bloqué" if int(row.get("bloque") or 0) != 0 else "Actif"
+    return row
+
+
+def list_fournisseurs(
+    *,
+    search: str | None = None,
+    statut: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> dict[str, Any]:
+    where: list[str] = []
+    params: dict[str, Any] = {}
+    if search:
+        where.append(
+            "(UPPER(designation) LIKE :search OR num_fourn LIKE :search "
+            "OR UPPER(COALESCE(adresse, '')) LIKE :search "
+            "OR UPPER(COALESCE(activite, '')) LIKE :search)"
+        )
+        params["search"] = f"%{search.upper()}%"
+    if statut == "actif":
+        where.append("COALESCE(bloque, 0) = 0")
+    elif statut == "bloque":
+        where.append("COALESCE(bloque, 0) <> 0")
+
+    base = _FOURN_LIST_BASE
+    if where:
+        base += " WHERE " + " AND ".join(where)
+    result = oracle.paginate(
+        base, params, page=page, page_size=page_size, order_by="designation ASC"
+    )
+    result["results"] = [_decorate_fourn(r) for r in result["results"]]
+    return result
+
+
+def fournisseurs_stats() -> dict[str, Any]:
+    row = oracle.fetch_one(
+        """
+        SELECT COUNT(*) AS total,
+               SUM(CASE WHEN COALESCE(bloque, 0) = 0 THEN 1 ELSE 0 END) AS actifs,
+               SUM(CASE WHEN COALESCE(bloque, 0) <> 0 THEN 1 ELSE 0 END) AS bloques,
+               SUM(CASE WHEN tel IS NOT NULL AND TRIM(tel) <> '' THEN 1 ELSE 0 END) AS avec_tel
+        FROM fournisseur
+        """
+    )
+    return row or {}
+
+
+def get_fournisseur(code: str) -> dict[str, Any] | None:
+    row = oracle.fetch_one(
+        """
+        SELECT num_fourn       AS code,
+               designation     AS designation,
+               raison_sociale  AS raison_sociale,
+               activite        AS activite,
+               adresse         AS adresse,
+               tel             AS tel,
+               fax             AS fax,
+               email           AS email,
+               web             AS web,
+               bank            AS bank,
+               rib             AS rib,
+               mat_fisc        AS mat_fisc,
+               date_creation   AS date_creation,
+               COALESCE(bloque, 0) AS bloque
+        FROM fournisseur
+        WHERE num_fourn = :code
+        """,
+        {"code": code},
+    )
+    return _decorate_fourn(row) if row else None
+
+
 # ---- Overview (home dashboard aggregates) ----------------------------------
 
 def overview() -> dict[str, Any]:

@@ -212,6 +212,30 @@ def ordre_mission_detail(request: Request, num_om: int) -> Response:
 
 
 @api_view(["GET"])
+def fournisseur_list(request: Request) -> Response:
+    data = queries.list_fournisseurs(
+        search=request.query_params.get("search") or None,
+        statut=request.query_params.get("statut") or None,
+        page=_int_param(request, "page", 1),
+        page_size=_int_param(request, "page_size", 20),
+    )
+    return Response(data)
+
+
+@api_view(["GET"])
+def fournisseur_stats(request: Request) -> Response:
+    return Response(queries.fournisseurs_stats())
+
+
+@api_view(["GET"])
+def fournisseur_detail(request: Request, code: str) -> Response:
+    row = queries.get_fournisseur(code)
+    if row is None:
+        return Response({"detail": "Fournisseur introuvable"}, status=404)
+    return Response(row)
+
+
+@api_view(["GET"])
 def lookups(request: Request, name: str) -> Response:
     """Reference-data endpoint: /api/lookups/<name>/."""
     if name == "marques":

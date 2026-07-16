@@ -358,6 +358,41 @@ export interface OrdreMissionStats {
   conducteurs: number
 }
 
+export interface Fournisseur {
+  code: string
+  designation: string | null
+  activite: string | null
+  adresse: string | null
+  tel: string | null
+  email: string | null
+  bloque: number | null
+  statut: string | null
+}
+
+export interface FournisseurDetail extends Fournisseur {
+  raison_sociale: string | null
+  fax: string | null
+  web: string | null
+  bank: string | null
+  rib: string | null
+  mat_fisc: string | null
+  date_creation: string | null
+}
+
+export interface FournisseurQuery {
+  search?: string
+  statut?: string
+  page?: number
+  page_size?: number
+}
+
+export interface FournisseurStats {
+  total: number
+  actifs: number
+  bloques: number
+  avec_tel: number
+}
+
 export interface OverviewData {
   kpis: {
     vehicules_total: number

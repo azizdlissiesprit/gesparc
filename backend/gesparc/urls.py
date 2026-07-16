@@ -31,5 +31,8 @@ urlpatterns = [
     path("ordres-mission/", views.ordre_mission_list, name="om-list"),
     path("ordres-mission/stats/", views.ordre_mission_stats, name="om-stats"),
     path("ordres-mission/<int:num_om>/", views.ordre_mission_detail, name="om-detail"),
+    path("fournisseurs/", views.fournisseur_list, name="fournisseur-list"),
+    path("fournisseurs/stats/", views.fournisseur_stats, name="fournisseur-stats"),
+    path("fournisseurs/<path:code>/", views.fournisseur_detail, name="fournisseur-detail"),
     path("lookups/<str:name>/", views.lookups, name="lookups"),
 ]

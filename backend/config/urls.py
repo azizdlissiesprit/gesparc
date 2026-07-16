@@ -15,7 +15,11 @@ def spa(_request):
     """Serve the SPA entry point, or a small JSON banner if not built (dev)."""
     index = Path(settings.STATIC_ROOT) / "index.html"
     if index.exists():
-        return FileResponse(open(index, "rb"), content_type="text/html")
+        resp = FileResponse(open(index, "rb"), content_type="text/html")
+        # index.html references hashed assets; never let the browser cache the
+        # shell itself, so new deploys are picked up without a hard refresh.
+        resp["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return resp
     return JsonResponse(
         {"service": "gesparc-api", "docs": "/api/", "health": "/api/health/"}
     )
