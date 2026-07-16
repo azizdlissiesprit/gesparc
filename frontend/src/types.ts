@@ -228,6 +228,55 @@ export interface BonTravailStats {
   by_nature: { nature_code: string; nature: string; n: number }[]
 }
 
+export interface BonCommande {
+  reference: string
+  date_creation: string | null
+  num_fourn: string | null
+  fournisseur: string | null
+  num_parc: string | null
+  parc: string | null
+  num_marche: string | null
+  montant: number | null
+  date_livraison: string | null
+  montant_livre: number | null
+  montant_facture: number | null
+  date_facture: string | null
+  montant_reglement: number | null
+  date_reglement: string | null
+  statut_code: string | null
+  statut: string | null
+}
+
+export interface BonCommandeLigne {
+  code: string | null
+  designation: string | null
+  quantite: number | null
+  prix_unitaire: number | null
+  tva: number | null
+  montant_ht: number | null
+  montant_ttc: number | null
+}
+
+export interface BonCommandeDetail extends BonCommande {
+  lignes: BonCommandeLigne[]
+}
+
+export interface BonCommandeQuery {
+  search?: string
+  num_fourn?: string
+  statut?: string
+  page?: number
+  page_size?: number
+}
+
+export interface BonCommandeStats {
+  total: number
+  receptionnes: number
+  en_attente: number
+  nb_fournisseurs: number
+  montant_total: number | null
+}
+
 export interface OverviewData {
   kpis: {
     vehicules_total: number

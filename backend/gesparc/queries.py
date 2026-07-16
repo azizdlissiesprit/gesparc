@@ -629,6 +629,131 @@ def demandes_stats() -> dict[str, Any]:
     return row or {}
 
 
+# ---- Achat (bons de commande / supplier orders) ----------------------------
+# Header from V_GESPARC_PIECE_FOURNISSEUR (+ fournisseur / parc names), lines
+# from V_GESPARC_LIGNE_FOURNISSEUR (+ article designation, computed montants).
+BC_STATUT_LABELS = {"receptionne": "Réceptionné(e)", "en_attente": "En attente"}
+
+_BC_BASE = """
+SELECT p.num_piece_int                    AS reference,
+       p.date_commande                    AS date_creation,
+       p.num_fourn                        AS num_fourn,
+       f.designation                      AS fournisseur,
+       p.num_parc                         AS num_parc,
+       pc.designation                     AS parc,
+       p.num_marche                       AS num_marche,
+       p.montant_commande                 AS montant,
+       p.date_livraison                   AS date_livraison,
+       p.montant_livre                    AS montant_livre,
+       p.montant_facture                  AS montant_facture,
+       p.date_facture                     AS date_facture,
+       p.montant_reglement                AS montant_reglement,
+       p.date_reglement                   AS date_reglement,
+       CASE WHEN p.date_livraison IS NOT NULL THEN 'receptionne'
+            ELSE 'en_attente' END         AS statut_code
+FROM v_gesparc_piece_fournisseur p
+LEFT JOIN fournisseur f ON f.num_fourn = p.num_fourn
+LEFT JOIN parc pc ON pc.num_parc = p.num_parc
+"""
+
+
+def _decorate_bc(row: dict[str, Any]) -> dict[str, Any]:
+    row["statut"] = BC_STATUT_LABELS.get(str(row.get("statut_code")), row.get("statut_code"))
+    return row
+
+
+def list_bons_commande(
+    *,
+    search: str | None = None,
+    num_fourn: str | None = None,
+    statut: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> dict[str, Any]:
+    where: list[str] = []
+    params: dict[str, Any] = {}
+    if search:
+        where.append(
+            "(UPPER(p.num_piece_int) LIKE :search OR UPPER(f.designation) LIKE :search)"
+        )
+        params["search"] = f"%{search.upper()}%"
+    if num_fourn:
+        where.append("p.num_fourn = :num_fourn")
+        params["num_fourn"] = num_fourn
+    if statut == "receptionne":
+        where.append("p.date_livraison IS NOT NULL")
+    elif statut == "en_attente":
+        where.append("p.date_livraison IS NULL")
+
+    base = _BC_BASE
+    if where:
+        base += " WHERE " + " AND ".join(where)
+    result = oracle.paginate(
+        base, params, page=page, page_size=page_size,
+        order_by="date_creation DESC NULLS LAST",
+    )
+    result["results"] = [_decorate_bc(r) for r in result["results"]]
+    return result
+
+
+def bons_commande_stats() -> dict[str, Any]:
+    row = oracle.fetch_one(
+        """
+        SELECT COUNT(*) AS total,
+               SUM(CASE WHEN date_livraison IS NOT NULL THEN 1 ELSE 0 END) AS receptionnes,
+               SUM(CASE WHEN date_livraison IS NULL THEN 1 ELSE 0 END) AS en_attente,
+               COUNT(DISTINCT num_fourn) AS nb_fournisseurs,
+               COALESCE(SUM(montant_commande), 0) AS montant_total
+        FROM v_gesparc_piece_fournisseur
+        """
+    )
+    return row or {}
+
+
+def get_bon_commande(reference: str) -> dict[str, Any] | None:
+    header = oracle.fetch_one(
+        _BC_BASE + " WHERE p.num_piece_int = :ref", {"ref": reference}
+    )
+    if not header:
+        return None
+    _decorate_bc(header)
+    header["lignes"] = oracle.fetch_all(
+        """
+        SELECT l.num_article       AS code,
+               a.designation       AS designation,
+               l.qte_commandee     AS quantite,
+               l.prix_unitaire     AS prix_unitaire,
+               l.tva               AS tva,
+               l.montant_net_ht    AS montant_ht,
+               l.montant_ttc       AS montant_ttc
+        FROM v_gesparc_ligne_fournisseur l
+        LEFT JOIN article a ON a.num_article = l.num_article
+        WHERE l.num_piece_int = :ref
+        ORDER BY l.num_article
+        """,
+        {"ref": reference},
+    )
+    return header
+
+
+def lookup_fournisseurs(search: str | None = None, limit: int = 50) -> list[dict]:
+    if search:
+        return oracle.fetch_all(
+            """
+            SELECT num_fourn AS value, designation AS label
+            FROM fournisseur
+            WHERE UPPER(designation) LIKE :search OR num_fourn LIKE :search
+            ORDER BY designation LIMIT :limit
+            """,
+            {"search": f"%{search.upper()}%", "limit": limit},
+        )
+    return oracle.fetch_all(
+        "SELECT num_fourn AS value, designation AS label "
+        "FROM fournisseur ORDER BY designation LIMIT :limit",
+        {"limit": limit},
+    )
+
+
 # ---- Overview (home dashboard aggregates) ----------------------------------
 
 def overview() -> dict[str, Any]:

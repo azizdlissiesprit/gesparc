@@ -22,5 +22,8 @@ urlpatterns = [
     path("bons-travail/stats/", views.bon_travail_stats, name="bt-stats"),
     # detail last: stats path above must win over the greedy <path:reference>
     path("bons-travail/<path:reference>/", views.bon_travail_detail, name="bt-detail"),
+    path("bons-commande/", views.bon_commande_list, name="bc-list"),
+    path("bons-commande/stats/", views.bon_commande_stats, name="bc-stats"),
+    path("bons-commande/<path:reference>/", views.bon_commande_detail, name="bc-detail"),
     path("lookups/<str:name>/", views.lookups, name="lookups"),
 ]

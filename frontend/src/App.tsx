@@ -21,6 +21,7 @@ import BonsTravailPage from './pages/BonsTravailPage'
 import DemandesInterventionPage from './pages/DemandesInterventionPage'
 import SortiesVehiculesPage from './pages/SortiesVehiculesPage'
 import HistoriqueMaintenancePage from './pages/HistoriqueMaintenancePage'
+import BonsCommandePage from './pages/BonsCommandePage'
 import Placeholder from './pages/Placeholder'
 
 const { Header, Sider, Content } = Layout
@@ -128,6 +129,7 @@ export default function App() {
             <Route path="/interventions" element={<DemandesInterventionPage />} />
             <Route path="/sorties" element={<SortiesVehiculesPage />} />
             <Route path="/historique" element={<HistoriqueMaintenancePage />} />
+            <Route path="/achat" element={<BonsCommandePage />} />
             <Route path="*" element={<Placeholder />} />
           </Routes>
         </Content>

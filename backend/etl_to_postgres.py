@@ -37,9 +37,15 @@ BASE_TABLES = [
     "ENERGIE_TAB", "USAGE_VEH", "GOUVERNORAT", "VEHICULE", "FRAIS_DIVERS",
     "REFORME", "LIGNE_REFORME", "BON_TRAVAIL", "LIGNE_BON_TRAVAIL",
     "OPERATION", "DEM_INTERVENTION",
+    # Achat (bons de commande) module:
+    "FOURNISSEUR", "PARC", "ARTICLE",
 ]
 # Oracle views materialized into Postgres tables of the same name.
-VIEW_TABLES = ["V_GESPARC_VEHICULE", "V_GESPARC_BON_TRAVAIL"]
+VIEW_TABLES = [
+    "V_GESPARC_VEHICULE", "V_GESPARC_BON_TRAVAIL",
+    # Achat: header + article lines with computed montants.
+    "V_GESPARC_PIECE_FOURNISSEUR", "V_GESPARC_LIGNE_FOURNISSEUR",
+]
 
 # Helpful indexes for the columns the backend filters / joins on.
 INDEXES = {
@@ -58,6 +64,12 @@ INDEXES = {
     "genre_vehicule": ["genre"],
     "energie_tab": ["energie"],
     "usage_veh": ["num_usage"],
+    # Achat module
+    "fournisseur": ["num_fourn"],
+    "parc": ["num_parc"],
+    "article": ["num_article"],
+    "v_gesparc_piece_fournisseur": ["num_piece_int", "num_fourn", "num_parc"],
+    "v_gesparc_ligne_fournisseur": ["num_piece_int", "num_article"],
 }
 
 
@@ -111,19 +123,33 @@ def copy_one(ocur, pgconn, source: str, target: str) -> int:
 
 
 def main() -> int:
+    # Optional CLI args: migrate only the named tables (e.g. add a new module's
+    # tables to Neon without touching the existing ones). No args = everything.
+    only = {a.upper() for a in sys.argv[1:]}
+    tables = [t for t in BASE_TABLES + VIEW_TABLES if not only or t in only]
+    if only:
+        missing = only - set(BASE_TABLES + VIEW_TABLES)
+        if missing:
+            print(f"Unknown table(s): {', '.join(sorted(missing))}")
+            return 1
+
     print(f"Postgres target: {PG_DSN}")
+    print(f"Migrating {len(tables)} table(s): {', '.join(t.lower() for t in tables)}")
     ora = connect_oracle()
     ocur = ora.cursor()
     total = 0
     with psycopg.connect(PG_DSN) as pg:
-        for src in BASE_TABLES + VIEW_TABLES:
+        for src in tables:
             tgt = src.lower()
             n = copy_one(ocur, pg, src, tgt)
             total += n
-            print(f"  {tgt:<26} {n:>8,} rows")
-        # indexes
+            print(f"  {tgt:<28} {n:>8,} rows")
+        # indexes (only for the tables we (re)created)
+        migrated = {t.lower() for t in tables}
         with pg.cursor() as pc:
             for tbl, colset in INDEXES.items():
+                if tbl not in migrated:
+                    continue
                 for col in colset:
                     idx = f"ix_{tbl}_{col}"
                     pc.execute(
@@ -133,7 +159,7 @@ def main() -> int:
         print("  indexes created")
     ocur.close()
     ora.close()
-    print(f"DONE — {len(BASE_TABLES) + len(VIEW_TABLES)} tables, {total:,} rows")
+    print(f"DONE — {len(tables)} tables, {total:,} rows")
     return 0
 
 
