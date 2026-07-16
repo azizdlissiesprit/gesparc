@@ -315,6 +315,49 @@ export interface ArticleStats {
   nb_marques: number
 }
 
+export interface OrdreMission {
+  num_om: number
+  num_plaque: string | null
+  num_veh: string | null
+  num_struct: string | null
+  structure: string | null
+  iu: string | null
+  conducteur: string | null
+  destination: string | null
+  date_om: string | null
+  date_depart: string | null
+  date_fin: string | null
+  date_debut_validite: string | null
+  date_fin_validite: string | null
+  km_depart: number | null
+  km_retour: number | null
+  statut_code: string | null
+  statut: string | null
+}
+
+export interface OrdreMissionDetail extends OrdreMission {
+  objectif: string | null
+  produits_transp: string | null
+  lieu_depart: string | null
+  distance: number | null
+}
+
+export interface OrdreMissionQuery {
+  search?: string
+  num_struct?: string
+  statut?: string
+  page?: number
+  page_size?: number
+}
+
+export interface OrdreMissionStats {
+  total: number
+  en_cours: number
+  terminees: number
+  vehicules: number
+  conducteurs: number
+}
+
 export interface OverviewData {
   kpis: {
     vehicules_total: number

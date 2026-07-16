@@ -852,6 +852,104 @@ def get_article(code: str) -> dict[str, Any] | None:
     )
 
 
+# ---- Ordres de mission -----------------------------------------------------
+OM_STATUT_LABELS = {"en_cours": "En cours", "terminee": "Terminée"}
+
+_OM_BASE = """
+SELECT om.num_om                          AS num_om,
+       om.num_plaque                      AS num_plaque,
+       om.num_veh                         AS num_veh,
+       om.num_struct                      AS num_struct,
+       s.designation                      AS structure,
+       om.iu                              AS iu,
+       NULLIF(TRIM(COALESCE(p.prenom, '') || ' ' || COALESCE(p.nom, '')), '') AS conducteur,
+       om.destination                     AS destination,
+       om.date_om                         AS date_om,
+       om.date_depart                     AS date_depart,
+       om.date_fin                        AS date_fin,
+       om.date_debut_validite             AS date_debut_validite,
+       om.date_fin_validite               AS date_fin_validite,
+       om.km_depart                       AS km_depart,
+       om.km_retour                       AS km_retour,
+       CASE WHEN om.date_fin IS NOT NULL THEN 'terminee' ELSE 'en_cours' END AS statut_code
+FROM ordre_mission om
+LEFT JOIN structure s ON s.num_struct = om.num_struct
+LEFT JOIN personnel p ON p.iu = om.iu
+"""
+
+
+def _decorate_om(row: dict[str, Any]) -> dict[str, Any]:
+    row["statut"] = OM_STATUT_LABELS.get(str(row.get("statut_code")), row.get("statut_code"))
+    return row
+
+
+def list_ordres_mission(
+    *,
+    search: str | None = None,
+    num_struct: str | None = None,
+    statut: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> dict[str, Any]:
+    where: list[str] = []
+    params: dict[str, Any] = {}
+    if search:
+        where.append(
+            "(om.num_om::text LIKE :search OR UPPER(om.num_plaque) LIKE :search "
+            "OR UPPER(om.destination) LIKE :search OR UPPER(s.designation) LIKE :search "
+            "OR UPPER(COALESCE(p.prenom, '') || ' ' || COALESCE(p.nom, '')) LIKE :search)"
+        )
+        params["search"] = f"%{search.upper()}%"
+    if num_struct:
+        where.append("om.num_struct = :num_struct")
+        params["num_struct"] = num_struct
+    if statut == "en_cours":
+        where.append("om.date_fin IS NULL")
+    elif statut == "terminee":
+        where.append("om.date_fin IS NOT NULL")
+
+    base = _OM_BASE
+    if where:
+        base += " WHERE " + " AND ".join(where)
+    result = oracle.paginate(
+        base, params, page=page, page_size=page_size,
+        order_by="date_depart DESC NULLS LAST, num_om DESC",
+    )
+    result["results"] = [_decorate_om(r) for r in result["results"]]
+    return result
+
+
+def ordres_mission_stats() -> dict[str, Any]:
+    row = oracle.fetch_one(
+        """
+        SELECT COUNT(*) AS total,
+               SUM(CASE WHEN date_fin IS NULL THEN 1 ELSE 0 END) AS en_cours,
+               SUM(CASE WHEN date_fin IS NOT NULL THEN 1 ELSE 0 END) AS terminees,
+               COUNT(DISTINCT num_veh) AS vehicules,
+               COUNT(DISTINCT iu) AS conducteurs
+        FROM ordre_mission
+        """
+    )
+    return row or {}
+
+
+def get_ordre_mission(num_om: int) -> dict[str, Any] | None:
+    row = oracle.fetch_one(
+        _OM_BASE.rstrip() + " WHERE om.num_om = :num_om", {"num_om": num_om}
+    )
+    if not row:
+        return None
+    _decorate_om(row)
+    extra = oracle.fetch_one(
+        "SELECT objectif, produits_transp, lieu_depart, "
+        "(km_retour - km_depart) AS distance FROM ordre_mission WHERE num_om = :num_om",
+        {"num_om": num_om},
+    )
+    if extra:
+        row.update(extra)
+    return row
+
+
 # ---- Overview (home dashboard aggregates) ----------------------------------
 
 def overview() -> dict[str, Any]:

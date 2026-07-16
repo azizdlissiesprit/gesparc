@@ -187,6 +187,31 @@ def article_detail(request: Request, code: str) -> Response:
 
 
 @api_view(["GET"])
+def ordre_mission_list(request: Request) -> Response:
+    data = queries.list_ordres_mission(
+        search=request.query_params.get("search") or None,
+        num_struct=request.query_params.get("num_struct") or None,
+        statut=request.query_params.get("statut") or None,
+        page=_int_param(request, "page", 1),
+        page_size=_int_param(request, "page_size", 20),
+    )
+    return Response(data)
+
+
+@api_view(["GET"])
+def ordre_mission_stats(request: Request) -> Response:
+    return Response(queries.ordres_mission_stats())
+
+
+@api_view(["GET"])
+def ordre_mission_detail(request: Request, num_om: int) -> Response:
+    row = queries.get_ordre_mission(num_om)
+    if row is None:
+        return Response({"detail": "Ordre de mission introuvable"}, status=404)
+    return Response(row)
+
+
+@api_view(["GET"])
 def lookups(request: Request, name: str) -> Response:
     """Reference-data endpoint: /api/lookups/<name>/."""
     if name == "marques":

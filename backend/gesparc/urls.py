@@ -28,5 +28,8 @@ urlpatterns = [
     path("articles/", views.article_list, name="article-list"),
     path("articles/stats/", views.article_stats, name="article-stats"),
     path("articles/<path:code>/", views.article_detail, name="article-detail"),
+    path("ordres-mission/", views.ordre_mission_list, name="om-list"),
+    path("ordres-mission/stats/", views.ordre_mission_stats, name="om-stats"),
+    path("ordres-mission/<int:num_om>/", views.ordre_mission_detail, name="om-detail"),
     path("lookups/<str:name>/", views.lookups, name="lookups"),
 ]

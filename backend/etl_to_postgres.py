@@ -41,6 +41,8 @@ BASE_TABLES = [
     "FOURNISSEUR", "PARC", "ARTICLE",
     # Stock (articles) module: family lookups.
     "FAMILLE", "SOUS_FAMILLE",
+    # Ordres de mission module (personnel = driver names).
+    "ORDRE_MISSION", "PERSONNEL",
 ]
 # Oracle views materialized into Postgres tables of the same name.
 VIEW_TABLES = [
@@ -92,6 +94,9 @@ INDEXES = {
     "famille": ["num_famille"],
     "sous_famille": ["num_famille", "num_s_famille"],
     "stock_article": ["num_article"],
+    # Ordres de mission module
+    "ordre_mission": ["num_om", "num_struct", "num_veh", "iu"],
+    "personnel": ["iu"],
 }
 
 
