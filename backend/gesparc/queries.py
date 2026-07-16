@@ -1039,6 +1039,129 @@ def get_fournisseur(code: str) -> dict[str, Any] | None:
     return _decorate_fourn(row) if row else None
 
 
+# ---- Sinistres / assurances ------------------------------------------------
+SIN_NATURE_LABELS = {1: "Accident", 2: "Vol", 3: "Incendie", 4: "Autre"}
+SIN_STATUT_LABELS = {"ouvert": "Ouvert", "clos": "Clôturé"}
+
+_SIN_BASE = """
+SELECT s.num_sin                          AS num_sin,
+       s.num_plaque                       AS num_plaque,
+       s.num_veh                          AS num_veh,
+       v.num_struct                       AS num_struct,
+       st.designation                     AS structure,
+       s.num_cause_sin                    AS cause_code,
+       c.designation                      AS cause,
+       s.nature_sinistre                  AS nature_code,
+       s.date_sinistre                    AS date_sinistre,
+       s.lieu_sinistre                    AS lieu_sinistre,
+       s.tiers                            AS tiers,
+       s.montant_rep                      AS montant_rep,
+       s.montant_indem                    AS montant_indem,
+       s.date_fin                         AS date_fin,
+       CASE WHEN s.date_fin IS NULL THEN 'ouvert' ELSE 'clos' END AS statut_code
+FROM sinistre s
+LEFT JOIN cause_sin c ON c.num_cause_sin::numeric = s.num_cause_sin
+LEFT JOIN vehicule v ON v.num_veh = s.num_veh
+LEFT JOIN structure st ON st.num_struct = v.num_struct
+"""
+
+
+def _decorate_sin(row: dict[str, Any]) -> dict[str, Any]:
+    nc = row.get("nature_code")
+    row["nature"] = SIN_NATURE_LABELS.get(int(nc)) if nc is not None else None
+    row["statut"] = SIN_STATUT_LABELS.get(str(row.get("statut_code")), row.get("statut_code"))
+    return row
+
+
+def list_sinistres(
+    *,
+    search: str | None = None,
+    nature: int | None = None,
+    statut: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> dict[str, Any]:
+    where: list[str] = []
+    params: dict[str, Any] = {}
+    if search:
+        where.append(
+            "(UPPER(s.num_sin) LIKE :search OR UPPER(s.num_plaque) LIKE :search "
+            "OR UPPER(COALESCE(c.designation, '')) LIKE :search "
+            "OR UPPER(COALESCE(st.designation, '')) LIKE :search "
+            "OR UPPER(COALESCE(s.tiers, '')) LIKE :search)"
+        )
+        params["search"] = f"%{search.upper()}%"
+    if nature is not None:
+        where.append("s.nature_sinistre = :nature")
+        params["nature"] = nature
+    if statut == "ouvert":
+        where.append("s.date_fin IS NULL")
+    elif statut == "clos":
+        where.append("s.date_fin IS NOT NULL")
+
+    base = _SIN_BASE
+    if where:
+        base += " WHERE " + " AND ".join(where)
+    result = oracle.paginate(
+        base, params, page=page, page_size=page_size,
+        order_by="date_sinistre DESC NULLS LAST",
+    )
+    result["results"] = [_decorate_sin(r) for r in result["results"]]
+    return result
+
+
+def sinistres_stats() -> dict[str, Any]:
+    row = oracle.fetch_one(
+        """
+        SELECT COUNT(*) AS total,
+               SUM(CASE WHEN date_fin IS NULL THEN 1 ELSE 0 END) AS ouverts,
+               SUM(CASE WHEN date_fin IS NOT NULL THEN 1 ELSE 0 END) AS clos,
+               COALESCE(SUM(montant_rep), 0) AS montant_rep_total,
+               COALESCE(SUM(montant_indem), 0) AS montant_indem_total
+        FROM sinistre
+        """
+    )
+    return row or {}
+
+
+def get_sinistre(num_sin: str) -> dict[str, Any] | None:
+    row = oracle.fetch_one(
+        """
+        SELECT s.num_sin           AS num_sin,
+               s.num_plaque        AS num_plaque,
+               s.num_veh           AS num_veh,
+               v.num_struct        AS num_struct,
+               st.designation      AS structure,
+               s.num_cause_sin     AS cause_code,
+               c.designation       AS cause,
+               s.nature_sinistre   AS nature_code,
+               s.date_sinistre     AS date_sinistre,
+               s.lieu_sinistre     AS lieu_sinistre,
+               s.observation       AS observation,
+               s.tiers             AS tiers,
+               s.adresse_tiers     AS adresse_tiers,
+               s.assurance_tiers   AS assurance_tiers,
+               s.num_expert        AS expert_code,
+               e.designation       AS expert,
+               s.date_expertise    AS date_expertise,
+               s.date_reexpertise  AS date_reexpertise,
+               s.date_notif        AS date_notif,
+               s.montant_rep       AS montant_rep,
+               s.montant_indem     AS montant_indem,
+               s.date_fin          AS date_fin,
+               CASE WHEN s.date_fin IS NULL THEN 'ouvert' ELSE 'clos' END AS statut_code
+        FROM sinistre s
+        LEFT JOIN cause_sin c ON c.num_cause_sin::numeric = s.num_cause_sin
+        LEFT JOIN vehicule v ON v.num_veh = s.num_veh
+        LEFT JOIN structure st ON st.num_struct = v.num_struct
+        LEFT JOIN expert e ON e.num_expert = s.num_expert
+        WHERE s.num_sin = :num_sin
+        """,
+        {"num_sin": num_sin},
+    )
+    return _decorate_sin(row) if row else None
+
+
 # ---- Overview (home dashboard aggregates) ----------------------------------
 
 def overview() -> dict[str, Any]:

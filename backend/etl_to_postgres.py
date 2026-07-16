@@ -43,6 +43,8 @@ BASE_TABLES = [
     "FAMILLE", "SOUS_FAMILLE",
     # Ordres de mission module (personnel = driver names).
     "ORDRE_MISSION", "PERSONNEL",
+    # Sinistres / assurances module.
+    "SINISTRE", "CAUSE_SIN", "EXPERT",
 ]
 # Oracle views materialized into Postgres tables of the same name.
 VIEW_TABLES = [
@@ -97,6 +99,10 @@ INDEXES = {
     # Ordres de mission module
     "ordre_mission": ["num_om", "num_struct", "num_veh", "iu"],
     "personnel": ["iu"],
+    # Sinistres module
+    "sinistre": ["num_sin", "num_veh", "num_cause_sin", "num_expert"],
+    "cause_sin": ["num_cause_sin"],
+    "expert": ["num_expert"],
 }
 
 

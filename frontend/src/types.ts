@@ -393,6 +393,53 @@ export interface FournisseurStats {
   avec_tel: number
 }
 
+export interface Sinistre {
+  num_sin: string
+  num_plaque: string | null
+  num_veh: string | null
+  num_struct: string | null
+  structure: string | null
+  cause_code: number | null
+  cause: string | null
+  nature_code: number | null
+  nature: string | null
+  date_sinistre: string | null
+  lieu_sinistre: string | null
+  tiers: string | null
+  montant_rep: number | null
+  montant_indem: number | null
+  date_fin: string | null
+  statut_code: string | null
+  statut: string | null
+}
+
+export interface SinistreDetail extends Sinistre {
+  observation: string | null
+  adresse_tiers: string | null
+  assurance_tiers: string | null
+  expert_code: string | null
+  expert: string | null
+  date_expertise: string | null
+  date_reexpertise: string | null
+  date_notif: string | null
+}
+
+export interface SinistreQuery {
+  search?: string
+  nature?: number
+  statut?: string
+  page?: number
+  page_size?: number
+}
+
+export interface SinistreStats {
+  total: number
+  ouverts: number
+  clos: number
+  montant_rep_total: number | null
+  montant_indem_total: number | null
+}
+
 export interface OverviewData {
   kpis: {
     vehicules_total: number
