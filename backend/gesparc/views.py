@@ -162,6 +162,31 @@ def bon_commande_detail(request: Request, reference: str) -> Response:
 
 
 @api_view(["GET"])
+def article_list(request: Request) -> Response:
+    data = queries.list_articles(
+        search=request.query_params.get("search") or None,
+        marque=_int_param(request, "marque"),
+        statut=request.query_params.get("statut") or None,
+        page=_int_param(request, "page", 1),
+        page_size=_int_param(request, "page_size", 20),
+    )
+    return Response(data)
+
+
+@api_view(["GET"])
+def article_stats(request: Request) -> Response:
+    return Response(queries.articles_stats())
+
+
+@api_view(["GET"])
+def article_detail(request: Request, code: str) -> Response:
+    row = queries.get_article(code)
+    if row is None:
+        return Response({"detail": "Article introuvable"}, status=404)
+    return Response(row)
+
+
+@api_view(["GET"])
 def lookups(request: Request, name: str) -> Response:
     """Reference-data endpoint: /api/lookups/<name>/."""
     if name == "marques":

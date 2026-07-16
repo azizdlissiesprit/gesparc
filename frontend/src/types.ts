@@ -277,6 +277,44 @@ export interface BonCommandeStats {
   montant_total: number | null
 }
 
+export interface Article {
+  code: string
+  designation: string | null
+  ref_constructeur: string | null
+  genre: string | null
+  marque_code: number | null
+  marque: string | null
+  type: string | null
+  prix: number | null
+  qte_stock: number | null
+}
+
+export interface ArticleDetail extends Article {
+  ref_remplacement: string | null
+  tva: number | null
+  quantite_min: number | null
+  num_famille: number | null
+  famille: string | null
+  num_s_famille: number | null
+  sous_famille: string | null
+}
+
+export interface ArticleQuery {
+  search?: string
+  marque?: number
+  statut?: string
+  page?: number
+  page_size?: number
+}
+
+export interface ArticleStats {
+  total: number
+  en_stock: number
+  rupture: number
+  valeur_stock: number | null
+  nb_marques: number
+}
+
 export interface OverviewData {
   kpis: {
     vehicules_total: number

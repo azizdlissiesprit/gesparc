@@ -25,5 +25,8 @@ urlpatterns = [
     path("bons-commande/", views.bon_commande_list, name="bc-list"),
     path("bons-commande/stats/", views.bon_commande_stats, name="bc-stats"),
     path("bons-commande/<path:reference>/", views.bon_commande_detail, name="bc-detail"),
+    path("articles/", views.article_list, name="article-list"),
+    path("articles/stats/", views.article_stats, name="article-stats"),
+    path("articles/<path:code>/", views.article_detail, name="article-detail"),
     path("lookups/<str:name>/", views.lookups, name="lookups"),
 ]

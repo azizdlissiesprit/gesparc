@@ -39,6 +39,8 @@ BASE_TABLES = [
     "OPERATION", "DEM_INTERVENTION",
     # Achat (bons de commande) module:
     "FOURNISSEUR", "PARC", "ARTICLE",
+    # Stock (articles) module: family lookups.
+    "FAMILLE", "SOUS_FAMILLE",
 ]
 # Oracle views materialized into Postgres tables of the same name.
 VIEW_TABLES = [
@@ -46,6 +48,22 @@ VIEW_TABLES = [
     # Achat: header + article lines with computed montants.
     "V_GESPARC_PIECE_FOURNISSEUR", "V_GESPARC_LIGNE_FOURNISSEUR",
 ]
+
+# Aggregates computed in Oracle and stored as small snapshot tables (avoids
+# migrating millions of movement rows). Name -> Oracle SELECT.
+CUSTOM_QUERIES = {
+    # Current stock per article = entrées (type 1) − sorties (type 2).
+    "stock_article": """
+        SELECT la.num_article AS num_article,
+               SUM(CASE pa.type_piece_art
+                       WHEN 1 THEN la.quantite
+                       WHEN 2 THEN -la.quantite
+                       ELSE 0 END) AS qte_stock
+        FROM ligne_article la
+        JOIN piece_article pa ON pa.num_piece_int = la.num_piece_int
+        GROUP BY la.num_article
+    """,
+}
 
 # Helpful indexes for the columns the backend filters / joins on.
 INDEXES = {
@@ -70,6 +88,10 @@ INDEXES = {
     "article": ["num_article"],
     "v_gesparc_piece_fournisseur": ["num_piece_int", "num_fourn", "num_parc"],
     "v_gesparc_ligne_fournisseur": ["num_piece_int", "num_article"],
+    # Stock module
+    "famille": ["num_famille"],
+    "sous_famille": ["num_famille", "num_s_famille"],
+    "stock_article": ["num_article"],
 }
 
 
@@ -99,8 +121,9 @@ def connect_oracle():
     )
 
 
-def copy_one(ocur, pgconn, source: str, target: str) -> int:
-    ocur.execute(f"SELECT * FROM {source}")
+def copy_sql(ocur, pgconn, sql: str, target: str) -> int:
+    """Run an arbitrary Oracle SELECT and materialize its result as a PG table."""
+    ocur.execute(sql)
     cols = [d[0].lower() for d in ocur.description]
     types = [pg_type(d) for d in ocur.description]
     coldefs = ", ".join(f'"{c}" {t}' for c, t in zip(cols, types))
@@ -126,26 +149,35 @@ def main() -> int:
     # Optional CLI args: migrate only the named tables (e.g. add a new module's
     # tables to Neon without touching the existing ones). No args = everything.
     only = {a.upper() for a in sys.argv[1:]}
-    tables = [t for t in BASE_TABLES + VIEW_TABLES if not only or t in only]
+    all_sources = BASE_TABLES + VIEW_TABLES + [k.upper() for k in CUSTOM_QUERIES]
     if only:
-        missing = only - set(BASE_TABLES + VIEW_TABLES)
+        missing = only - set(all_sources)
         if missing:
             print(f"Unknown table(s): {', '.join(sorted(missing))}")
             return 1
 
+    def selected(name: str) -> bool:
+        return not only or name.upper() in only
+
+    tables = [t for t in BASE_TABLES + VIEW_TABLES if selected(t)]
+    customs = [k for k in CUSTOM_QUERIES if selected(k)]
     print(f"Postgres target: {PG_DSN}")
-    print(f"Migrating {len(tables)} table(s): {', '.join(t.lower() for t in tables)}")
+    print(f"Migrating {len(tables) + len(customs)} table(s)")
     ora = connect_oracle()
     ocur = ora.cursor()
     total = 0
     with psycopg.connect(PG_DSN) as pg:
         for src in tables:
             tgt = src.lower()
-            n = copy_one(ocur, pg, src, tgt)
+            n = copy_sql(ocur, pg, f"SELECT * FROM {src}", tgt)
             total += n
             print(f"  {tgt:<28} {n:>8,} rows")
+        for name in customs:
+            n = copy_sql(ocur, pg, CUSTOM_QUERIES[name], name.lower())
+            total += n
+            print(f"  {name:<28} {n:>8,} rows  (computed)")
         # indexes (only for the tables we (re)created)
-        migrated = {t.lower() for t in tables}
+        migrated = {t.lower() for t in tables} | {c.lower() for c in customs}
         with pg.cursor() as pc:
             for tbl, colset in INDEXES.items():
                 if tbl not in migrated:
@@ -159,7 +191,7 @@ def main() -> int:
         print("  indexes created")
     ocur.close()
     ora.close()
-    print(f"DONE — {len(tables)} tables, {total:,} rows")
+    print(f"DONE — {len(tables) + len(customs)} tables, {total:,} rows")
     return 0
 
 

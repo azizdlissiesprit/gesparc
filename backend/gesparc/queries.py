@@ -754,6 +754,104 @@ def lookup_fournisseurs(search: str | None = None, limit: int = 50) -> list[dict
     )
 
 
+# ---- Stock (articles / parts inventory) ------------------------------------
+# Current stock per article comes from the materialized `stock_article`
+# snapshot (entrées − sorties, computed in the ETL).
+_ARTICLE_LIST_BASE = """
+SELECT a.num_article            AS code,
+       a.designation            AS designation,
+       a.ref_constructeur       AS ref_constructeur,
+       a.genre                  AS genre,
+       a.marque                 AS marque_code,
+       mv.designation           AS marque,
+       a.type                   AS type,
+       a.prix_unitaire          AS prix,
+       COALESCE(s.qte_stock, 0) AS qte_stock
+FROM article a
+LEFT JOIN stock_article s ON s.num_article = a.num_article
+LEFT JOIN marque_vehicule mv ON mv.marque = a.marque
+"""
+
+
+def list_articles(
+    *,
+    search: str | None = None,
+    marque: int | None = None,
+    statut: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> dict[str, Any]:
+    where: list[str] = []
+    params: dict[str, Any] = {}
+    if search:
+        where.append(
+            "(UPPER(a.num_article) LIKE :search OR UPPER(a.designation) LIKE :search "
+            "OR UPPER(a.ref_constructeur) LIKE :search)"
+        )
+        params["search"] = f"%{search.upper()}%"
+    if marque is not None:
+        where.append("a.marque = :marque")
+        params["marque"] = marque
+    if statut == "en_stock":
+        where.append("COALESCE(s.qte_stock, 0) > 0")
+    elif statut == "rupture":
+        where.append("COALESCE(s.qte_stock, 0) <= 0")
+
+    base = _ARTICLE_LIST_BASE
+    if where:
+        base += " WHERE " + " AND ".join(where)
+    return oracle.paginate(
+        base, params, page=page, page_size=page_size, order_by="designation ASC"
+    )
+
+
+def articles_stats() -> dict[str, Any]:
+    row = oracle.fetch_one(
+        """
+        SELECT COUNT(*) AS total,
+               SUM(CASE WHEN COALESCE(s.qte_stock, 0) > 0 THEN 1 ELSE 0 END) AS en_stock,
+               SUM(CASE WHEN COALESCE(s.qte_stock, 0) <= 0 THEN 1 ELSE 0 END) AS rupture,
+               COALESCE(SUM(GREATEST(COALESCE(s.qte_stock, 0), 0)
+                            * COALESCE(a.prix_unitaire, 0)), 0) AS valeur_stock,
+               COUNT(DISTINCT a.marque) AS nb_marques
+        FROM article a
+        LEFT JOIN stock_article s ON s.num_article = a.num_article
+        """
+    )
+    return row or {}
+
+
+def get_article(code: str) -> dict[str, Any] | None:
+    return oracle.fetch_one(
+        """
+        SELECT a.num_article       AS code,
+               a.designation       AS designation,
+               a.ref_constructeur  AS ref_constructeur,
+               a.ref_remplacement  AS ref_remplacement,
+               a.genre             AS genre,
+               a.marque            AS marque_code,
+               mv.designation      AS marque,
+               a.type              AS type,
+               a.prix_unitaire     AS prix,
+               a.tva               AS tva,
+               a.quantite_min      AS quantite_min,
+               a.num_famille       AS num_famille,
+               f.designation       AS famille,
+               a.num_s_famille     AS num_s_famille,
+               sf.designation      AS sous_famille,
+               COALESCE(s.qte_stock, 0) AS qte_stock
+        FROM article a
+        LEFT JOIN stock_article s ON s.num_article = a.num_article
+        LEFT JOIN marque_vehicule mv ON mv.marque = a.marque
+        LEFT JOIN famille f ON f.num_famille = a.num_famille
+        LEFT JOIN sous_famille sf
+               ON sf.num_famille = a.num_famille AND sf.num_s_famille = a.num_s_famille
+        WHERE a.num_article = :code
+        """,
+        {"code": code},
+    )
+
+
 # ---- Overview (home dashboard aggregates) ----------------------------------
 
 def overview() -> dict[str, Any]:
