@@ -35,7 +35,10 @@ SELECT v.num_veh              AS num_veh,
        v.benef                AS beneficiaire,
        v.etat_vehicule        AS etat_code,
        v.index_km             AS index_km,
-       v.age_veh              AS age_veh
+       v.age_veh              AS age_veh,
+       -- Marque "GE" = Groupe Électrogène (stationary generator), not a road vehicle.
+       CASE WHEN TRIM(mv.designation) = 'GE' THEN 'groupe_electrogene'
+            ELSE 'vehicule' END AS categorie
 FROM v_gesparc_vehicule v
 LEFT JOIN marque_vehicule mv ON mv.marque = v.marque
 LEFT JOIN genre_vehicule  gv ON gv.genre  = v.genre
@@ -56,6 +59,7 @@ def list_vehicles(
     search: str | None = None,
     num_struct: str | None = None,
     etat: int | None = None,
+    categorie: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict[str, Any]:
@@ -77,6 +81,10 @@ def list_vehicles(
     if etat is not None:
         where.append("v.etat_vehicule = :etat")
         params["etat"] = etat
+    if categorie == "groupe_electrogene":
+        where.append("TRIM(mv.designation) = 'GE'")
+    elif categorie == "vehicule":
+        where.append("COALESCE(TRIM(mv.designation), '') <> 'GE'")
 
     inner = _VEHICLE_LIST_BASE
     if where:
@@ -1185,10 +1193,15 @@ SELECT e.annee                 AS annee,
        CASE WHEN e.km_parc_n > 0
             THEN ROUND(e.qt_carb_cons_n::numeric / e.km_parc_n * 100, 2)
             ELSE NULL END      AS cmck,
+       -- Marque "GE" = Groupe Électrogène (stationary generator, no odometer).
+       CASE WHEN TRIM(mv.designation) = 'GE' THEN 'groupe_electrogene'
+            ELSE 'vehicule' END AS categorie,
        concat(e.num_veh, '_', e.annee, '_', e.mois) AS id
 FROM v_gesparc_exploitation e
 LEFT JOIN structure s ON s.num_struct = e.num_struct
 LEFT JOIN energie_tab et ON et.energie = e.energie::text
+LEFT JOIN vehicule veh ON veh.num_veh = e.num_veh
+LEFT JOIN marque_vehicule mv ON mv.marque = veh.marque
 """
 
 
@@ -1198,6 +1211,7 @@ def list_exploitation(
     annee: int | None = None,
     mois: int | None = None,
     num_struct: str | None = None,
+    categorie: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict[str, Any]:
@@ -1215,6 +1229,10 @@ def list_exploitation(
     if num_struct:
         where.append("e.num_struct = :num_struct")
         params["num_struct"] = num_struct
+    if categorie == "groupe_electrogene":
+        where.append("TRIM(mv.designation) = 'GE'")
+    elif categorie == "vehicule":
+        where.append("COALESCE(TRIM(mv.designation), '') <> 'GE'")
 
     base = _EXPL_BASE
     if where:

@@ -28,6 +28,7 @@ export interface VehicleListItem {
   etat: string | null
   index_km: number | null
   age_veh: number | null
+  categorie: string | null
 }
 
 /** Full vehicle record for the detail/edit view (raw columns + resolved labels). */
@@ -64,6 +65,7 @@ export interface VehicleQuery {
   search?: string
   num_struct?: string
   etat?: number
+  categorie?: string
   page?: number
   page_size?: number
 }
@@ -457,6 +459,7 @@ export interface Exploitation {
   carburant_restant: number | null
   carburant_retourne: number | null
   cmck: number | null
+  categorie: string | null
   id: string
 }
 
@@ -465,6 +468,7 @@ export interface ExploitationQuery {
   annee?: number
   mois?: number
   num_struct?: string
+  categorie?: string
   page?: number
   page_size?: number
 }

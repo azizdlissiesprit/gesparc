@@ -15,6 +15,7 @@ import { EyeOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { fetchLookup, fetchVehicles } from '../api/vehicles'
 import type { LookupItem, VehicleListItem } from '../types'
 import { etatColor } from '../utils/etat'
+import { CATEGORIE_OPTIONS, categorieTag } from '../utils/categorie'
 import VehicleStatsCards from '../components/VehicleStatsCards'
 import VehicleDetailDrawer from '../components/VehicleDetailDrawer'
 
@@ -28,6 +29,7 @@ export default function VehiclesPage() {
   const [etat, setEtat] = useState<number | undefined>()
   const [numStruct, setNumStruct] = useState<string | undefined>()
   const [structSearch, setStructSearch] = useState('')
+  const [categorie, setCategorie] = useState<string | undefined>()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [selected, setSelected] = useState<string | null>(null)
@@ -55,12 +57,13 @@ export default function VehiclesPage() {
   })
 
   const { data, isFetching } = useQuery({
-    queryKey: ['vehicles', { search, etat, numStruct, page, pageSize }],
+    queryKey: ['vehicles', { search, etat, numStruct, categorie, page, pageSize }],
     queryFn: () =>
       fetchVehicles({
         search: search || undefined,
         etat,
         num_struct: numStruct,
+        categorie,
         page,
         page_size: pageSize,
       }),
@@ -76,6 +79,16 @@ export default function VehiclesPage() {
         render: (_v, _r, i) => (page - 1) * pageSize + i + 1,
       },
       { title: 'N° plaque', dataIndex: 'num_plaque', key: 'num_plaque', width: 110 },
+      {
+        title: 'Catégorie',
+        dataIndex: 'categorie',
+        key: 'categorie',
+        width: 150,
+        render: (c: string | null) => {
+          const m = categorieTag(c)
+          return <Tag color={m.color}>{m.label}</Tag>
+        },
+      },
       {
         title: 'Marque',
         dataIndex: 'marque',
@@ -135,6 +148,7 @@ export default function VehiclesPage() {
     setSearch('')
     setEtat(undefined)
     setNumStruct(undefined)
+    setCategorie(undefined)
     setPage(1)
   }
 
@@ -155,6 +169,17 @@ export default function VehiclesPage() {
             style={{ width: 320 }}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
+          />
+          <Select
+            allowClear
+            placeholder="Type de matériel"
+            style={{ width: 200 }}
+            value={categorie}
+            onChange={(v) => {
+              setCategorie(v)
+              setPage(1)
+            }}
+            options={CATEGORIE_OPTIONS}
           />
           <Select
             allowClear

@@ -39,6 +39,7 @@ def vehicle_list(request: Request) -> Response:
         search=request.query_params.get("search") or None,
         num_struct=request.query_params.get("num_struct") or None,
         etat=_int_param(request, "etat"),
+        categorie=request.query_params.get("categorie") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
     )
@@ -267,6 +268,7 @@ def exploitation_list(request: Request) -> Response:
         annee=_int_param(request, "annee"),
         mois=_int_param(request, "mois"),
         num_struct=request.query_params.get("num_struct") or None,
+        categorie=request.query_params.get("categorie") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
     )
