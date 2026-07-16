@@ -440,6 +440,43 @@ export interface SinistreStats {
   montant_indem_total: number | null
 }
 
+export interface Exploitation {
+  annee: number
+  mois: number
+  num_plaque: string | null
+  num_veh: string | null
+  num_struct: string | null
+  structure: string | null
+  energie_code: number | null
+  energie: string | null
+  index_km: number | null
+  index_km_prec: number | null
+  km_parcourus: number | null
+  carburant_recu: number | null
+  carburant_consomme: number | null
+  carburant_restant: number | null
+  carburant_retourne: number | null
+  cmck: number | null
+  id: string
+}
+
+export interface ExploitationQuery {
+  search?: string
+  annee?: number
+  mois?: number
+  num_struct?: string
+  page?: number
+  page_size?: number
+}
+
+export interface ExploitationStats {
+  total: number
+  km_total: number | null
+  carburant_total: number | null
+  vehicules: number
+  annees: number
+}
+
 export interface OverviewData {
   kpis: {
     vehicules_total: number

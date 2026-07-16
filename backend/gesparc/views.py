@@ -261,6 +261,24 @@ def sinistre_detail(request: Request, num_sin: str) -> Response:
 
 
 @api_view(["GET"])
+def exploitation_list(request: Request) -> Response:
+    data = queries.list_exploitation(
+        search=request.query_params.get("search") or None,
+        annee=_int_param(request, "annee"),
+        mois=_int_param(request, "mois"),
+        num_struct=request.query_params.get("num_struct") or None,
+        page=_int_param(request, "page", 1),
+        page_size=_int_param(request, "page_size", 20),
+    )
+    return Response(data)
+
+
+@api_view(["GET"])
+def exploitation_stats(request: Request) -> Response:
+    return Response(queries.exploitation_stats())
+
+
+@api_view(["GET"])
 def lookups(request: Request, name: str) -> Response:
     """Reference-data endpoint: /api/lookups/<name>/."""
     if name == "marques":
@@ -289,4 +307,6 @@ def lookups(request: Request, name: str) -> Response:
                 limit=_int_param(request, "limit", 50),
             )
         )
+    if name == "exploitation-annees":
+        return Response(queries.exploitation_annees())
     return Response({"detail": f"Lookup inconnu: {name}"}, status=404)

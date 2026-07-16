@@ -1162,6 +1162,90 @@ def get_sinistre(num_sin: str) -> dict[str, Any] | None:
     return _decorate_sin(row) if row else None
 
 
+# ---- Exploitation (monthly usage / fuel per vehicle) -----------------------
+# From the materialized V_GESPARC_EXPLOITATION (computed km parcourus, fuel
+# consumed, consommation moyenne /100km). One row per vehicle × month × year.
+_EXPL_BASE = """
+SELECT e.annee                 AS annee,
+       e.mois                  AS mois,
+       e.num_plaque            AS num_plaque,
+       e.num_veh               AS num_veh,
+       e.num_struct            AS num_struct,
+       s.designation           AS structure,
+       e.energie               AS energie_code,
+       et.designation          AS energie,
+       e.index_km_n            AS index_km,
+       e.index_km_n_1          AS index_km_prec,
+       e.km_parc_n             AS km_parcourus,
+       e.qt_recue_n            AS carburant_recu,
+       e.qt_carb_cons_n        AS carburant_consomme,
+       e.qt_carb_rest_n        AS carburant_restant,
+       e.qt_carb_ret_n         AS carburant_retourne,
+       -- the view's cmck_n is unreliable; compute conso / 100 km ourselves.
+       CASE WHEN e.km_parc_n > 0
+            THEN ROUND(e.qt_carb_cons_n::numeric / e.km_parc_n * 100, 2)
+            ELSE NULL END      AS cmck,
+       concat(e.num_veh, '_', e.annee, '_', e.mois) AS id
+FROM v_gesparc_exploitation e
+LEFT JOIN structure s ON s.num_struct = e.num_struct
+LEFT JOIN energie_tab et ON et.energie = e.energie::text
+"""
+
+
+def list_exploitation(
+    *,
+    search: str | None = None,
+    annee: int | None = None,
+    mois: int | None = None,
+    num_struct: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> dict[str, Any]:
+    where: list[str] = []
+    params: dict[str, Any] = {}
+    if search:
+        where.append("UPPER(e.num_plaque) LIKE :search")
+        params["search"] = f"%{search.upper()}%"
+    if annee is not None:
+        where.append("e.annee = :annee")
+        params["annee"] = annee
+    if mois is not None:
+        where.append("e.mois = :mois")
+        params["mois"] = mois
+    if num_struct:
+        where.append("e.num_struct = :num_struct")
+        params["num_struct"] = num_struct
+
+    base = _EXPL_BASE
+    if where:
+        base += " WHERE " + " AND ".join(where)
+    return oracle.paginate(
+        base, params, page=page, page_size=page_size,
+        order_by="annee DESC, mois DESC, num_plaque",
+    )
+
+
+def exploitation_stats() -> dict[str, Any]:
+    row = oracle.fetch_one(
+        """
+        SELECT COUNT(*) AS total,
+               COALESCE(SUM(GREATEST(km_parc_n, 0)), 0) AS km_total,
+               COALESCE(SUM(GREATEST(qt_carb_cons_n, 0)), 0) AS carburant_total,
+               COUNT(DISTINCT num_veh) AS vehicules,
+               COUNT(DISTINCT annee) AS annees
+        FROM v_gesparc_exploitation
+        """
+    )
+    return row or {}
+
+
+def exploitation_annees() -> list[dict]:
+    return oracle.fetch_all(
+        "SELECT DISTINCT annee AS value, annee AS label "
+        "FROM v_gesparc_exploitation WHERE annee IS NOT NULL ORDER BY annee DESC"
+    )
+
+
 # ---- Overview (home dashboard aggregates) ----------------------------------
 
 def overview() -> dict[str, Any]:

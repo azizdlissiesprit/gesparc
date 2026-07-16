@@ -51,6 +51,8 @@ VIEW_TABLES = [
     "V_GESPARC_VEHICULE", "V_GESPARC_BON_TRAVAIL",
     # Achat: header + article lines with computed montants.
     "V_GESPARC_PIECE_FOURNISSEUR", "V_GESPARC_LIGNE_FOURNISSEUR",
+    # Exploitation: monthly usage/fuel per vehicle (km parcourus, conso, cmck).
+    "V_GESPARC_EXPLOITATION",
 ]
 
 # Aggregates computed in Oracle and stored as small snapshot tables (avoids
@@ -103,6 +105,8 @@ INDEXES = {
     "sinistre": ["num_sin", "num_veh", "num_cause_sin", "num_expert"],
     "cause_sin": ["num_cause_sin"],
     "expert": ["num_expert"],
+    # Exploitation module
+    "v_gesparc_exploitation": ["num_veh", "num_plaque", "num_struct", "annee", "mois"],
 }
 
 

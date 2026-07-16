@@ -37,5 +37,7 @@ urlpatterns = [
     path("sinistres/", views.sinistre_list, name="sinistre-list"),
     path("sinistres/stats/", views.sinistre_stats, name="sinistre-stats"),
     path("sinistres/<path:num_sin>/", views.sinistre_detail, name="sinistre-detail"),
+    path("exploitation/", views.exploitation_list, name="exploitation-list"),
+    path("exploitation/stats/", views.exploitation_stats, name="exploitation-stats"),
     path("lookups/<str:name>/", views.lookups, name="lookups"),
 ]
