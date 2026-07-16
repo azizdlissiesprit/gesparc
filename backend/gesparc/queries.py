@@ -1264,6 +1264,112 @@ def exploitation_annees() -> list[dict]:
     )
 
 
+# ---- Carburant (fuel-distribution log) -------------------------------------
+# type_ligne_carb: 1 = normal distribution, 2 = complément/régularisation.
+CARB_TYPE_LABELS = {1: "Distribution", 2: "Complément"}
+
+_CARB_BASE = """
+SELECT c.num_ligne_carb        AS num_ligne_carb,
+       c.date_piece            AS date_piece,
+       c.num_plaque            AS num_plaque,
+       c.num_veh               AS num_veh,
+       c.num_struct            AS num_struct,
+       s.designation           AS structure,
+       c.iu                    AS iu,
+       NULLIF(TRIM(COALESCE(p.prenom, '') || ' ' || COALESCE(p.nom, '')), '') AS beneficiaire,
+       c.energie               AS energie_code,
+       et.designation          AS energie,
+       c.quantite              AS quantite,
+       c.prix_unitaire         AS prix_unitaire,
+       ROUND(COALESCE(c.quantite, 0) * COALESCE(c.prix_unitaire, 0), 3) AS montant,
+       c.index_km              AS index_km,
+       c.type_ligne_carb       AS type_code,
+       c.ref_bc                AS ref_bc,
+       -- Marque "GE" = Groupe Électrogène (stationary generator).
+       CASE WHEN TRIM(mv.designation) = 'GE' THEN 'groupe_electrogene'
+            ELSE 'vehicule' END AS categorie,
+       c.num_ligne_carb        AS id
+FROM ligne_carburant c
+LEFT JOIN structure s ON s.num_struct = c.num_struct
+LEFT JOIN energie_tab et ON et.energie = c.energie::text
+LEFT JOIN personnel p ON p.iu = c.iu
+LEFT JOIN vehicule veh ON veh.num_veh = c.num_veh
+LEFT JOIN marque_vehicule mv ON mv.marque = veh.marque
+"""
+
+
+def _decorate_carb(row: dict[str, Any]) -> dict[str, Any]:
+    code = row.get("type_code")
+    row["type"] = CARB_TYPE_LABELS.get(int(code), code) if code is not None else None
+    return row
+
+
+def list_carburant(
+    *,
+    search: str | None = None,
+    num_struct: str | None = None,
+    energie: str | None = None,
+    annee: int | None = None,
+    categorie: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> dict[str, Any]:
+    where: list[str] = []
+    params: dict[str, Any] = {}
+    if search:
+        where.append(
+            "(UPPER(c.num_plaque) LIKE :search OR UPPER(p.prenom) LIKE :search "
+            "OR UPPER(p.nom) LIKE :search)"
+        )
+        params["search"] = f"%{search.upper()}%"
+    if num_struct:
+        where.append("c.num_struct = :num_struct")
+        params["num_struct"] = num_struct
+    if energie:
+        where.append("c.energie::text = :energie")
+        params["energie"] = energie
+    if annee is not None:
+        where.append("EXTRACT(YEAR FROM c.date_piece) = :annee")
+        params["annee"] = annee
+    if categorie == "groupe_electrogene":
+        where.append("TRIM(mv.designation) = 'GE'")
+    elif categorie == "vehicule":
+        where.append("COALESCE(TRIM(mv.designation), '') <> 'GE'")
+
+    base = _CARB_BASE
+    if where:
+        base += " WHERE " + " AND ".join(where)
+    result = oracle.paginate(
+        base, params, page=page, page_size=page_size,
+        order_by="date_piece DESC NULLS LAST, num_ligne_carb",
+    )
+    result["results"] = [_decorate_carb(r) for r in result["results"]]
+    return result
+
+
+def carburant_stats() -> dict[str, Any]:
+    row = oracle.fetch_one(
+        """
+        SELECT COUNT(*) AS total,
+               COALESCE(SUM(GREATEST(quantite, 0)), 0) AS litres_total,
+               COALESCE(SUM(GREATEST(quantite, 0) * COALESCE(prix_unitaire, 0)), 0)
+                   AS montant_total,
+               COUNT(DISTINCT num_veh) AS vehicules,
+               COUNT(DISTINCT EXTRACT(YEAR FROM date_piece)) AS annees
+        FROM ligne_carburant
+        """
+    )
+    return row or {}
+
+
+def carburant_annees() -> list[dict]:
+    return oracle.fetch_all(
+        "SELECT DISTINCT EXTRACT(YEAR FROM date_piece)::int AS value, "
+        "EXTRACT(YEAR FROM date_piece)::int AS label "
+        "FROM ligne_carburant WHERE date_piece IS NOT NULL ORDER BY 1 DESC"
+    )
+
+
 # ---- Overview (home dashboard aggregates) ----------------------------------
 
 def overview() -> dict[str, Any]:

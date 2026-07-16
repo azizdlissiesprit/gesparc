@@ -481,6 +481,46 @@ export interface ExploitationStats {
   annees: number
 }
 
+export interface LigneCarburant {
+  num_ligne_carb: string
+  date_piece: string | null
+  num_plaque: string | null
+  num_veh: string | null
+  num_struct: string | null
+  structure: string | null
+  iu: string | null
+  beneficiaire: string | null
+  energie_code: number | null
+  energie: string | null
+  quantite: number | null
+  prix_unitaire: number | null
+  montant: number | null
+  index_km: number | null
+  type_code: number | null
+  type: string | null
+  ref_bc: string | null
+  categorie: string | null
+  id: string
+}
+
+export interface CarburantQuery {
+  search?: string
+  num_struct?: string
+  energie?: string
+  annee?: number
+  categorie?: string
+  page?: number
+  page_size?: number
+}
+
+export interface CarburantStats {
+  total: number
+  litres_total: number | null
+  montant_total: number | null
+  vehicules: number
+  annees: number
+}
+
 export interface OverviewData {
   kpis: {
     vehicules_total: number

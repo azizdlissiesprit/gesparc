@@ -281,6 +281,25 @@ def exploitation_stats(request: Request) -> Response:
 
 
 @api_view(["GET"])
+def carburant_list(request: Request) -> Response:
+    data = queries.list_carburant(
+        search=request.query_params.get("search") or None,
+        num_struct=request.query_params.get("num_struct") or None,
+        energie=request.query_params.get("energie") or None,
+        annee=_int_param(request, "annee"),
+        categorie=request.query_params.get("categorie") or None,
+        page=_int_param(request, "page", 1),
+        page_size=_int_param(request, "page_size", 20),
+    )
+    return Response(data)
+
+
+@api_view(["GET"])
+def carburant_stats(request: Request) -> Response:
+    return Response(queries.carburant_stats())
+
+
+@api_view(["GET"])
 def lookups(request: Request, name: str) -> Response:
     """Reference-data endpoint: /api/lookups/<name>/."""
     if name == "marques":
@@ -311,4 +330,6 @@ def lookups(request: Request, name: str) -> Response:
         )
     if name == "exploitation-annees":
         return Response(queries.exploitation_annees())
+    if name == "carburant-annees":
+        return Response(queries.carburant_annees())
     return Response({"detail": f"Lookup inconnu: {name}"}, status=404)

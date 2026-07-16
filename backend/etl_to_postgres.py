@@ -69,6 +69,33 @@ CUSTOM_QUERIES = {
         JOIN piece_article pa ON pa.num_piece_int = la.num_piece_int
         GROUP BY la.num_article
     """,
+    # Carburant: fuel-distribution log (218k lines). Lean projection of the
+    # columns the dashboard shows, with the fuel article's energy code joined
+    # in. Vehicle / structure / beneficiary names are resolved at query time.
+    "ligne_carburant": """
+        SELECT lc.num_ligne_carb AS num_ligne_carb,
+               lc.date_piece     AS date_piece,
+               lc.num_plaque     AS num_plaque,
+               lc.num_veh        AS num_veh,
+               lc.num_struct     AS num_struct,
+               lc.iu             AS iu,
+               lc.num_art_carb   AS num_art_carb,
+               ac.energie        AS energie,
+               lc.quantite       AS quantite,
+               lc.prix_unitaire  AS prix_unitaire,
+               lc.prix_ttc       AS prix_ttc,
+               lc.tva            AS tva,
+               lc.index_km       AS index_km,
+               lc.type_ligne_carb AS type_ligne_carb,
+               lc.carb_supp      AS carb_supp,
+               lc.nat_benef      AS nat_benef,
+               lc.nat_affect     AS nat_affect,
+               lc.ref_bc         AS ref_bc,
+               lc.num_bon_debut  AS num_bon_debut,
+               lc.num_bon_fin    AS num_bon_fin
+        FROM ligne_carburant lc
+        LEFT JOIN art_carburant ac ON ac.num_art_carb = lc.num_art_carb
+    """,
 }
 
 # Helpful indexes for the columns the backend filters / joins on.
@@ -107,6 +134,8 @@ INDEXES = {
     "expert": ["num_expert"],
     # Exploitation module
     "v_gesparc_exploitation": ["num_veh", "num_plaque", "num_struct", "annee", "mois"],
+    # Carburant module
+    "ligne_carburant": ["num_veh", "num_plaque", "num_struct", "iu", "energie"],
 }
 
 

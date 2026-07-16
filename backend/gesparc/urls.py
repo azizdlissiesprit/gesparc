@@ -39,5 +39,7 @@ urlpatterns = [
     path("sinistres/<path:num_sin>/", views.sinistre_detail, name="sinistre-detail"),
     path("exploitation/", views.exploitation_list, name="exploitation-list"),
     path("exploitation/stats/", views.exploitation_stats, name="exploitation-stats"),
+    path("carburant/", views.carburant_list, name="carburant-list"),
+    path("carburant/stats/", views.carburant_stats, name="carburant-stats"),
     path("lookups/<str:name>/", views.lookups, name="lookups"),
 ]
