@@ -20,6 +20,7 @@ urlpatterns = [
     path("reformes/stats/", views.reforme_stats, name="reforme-stats"),
     path("demandes/", views.demande_list, name="demande-list"),
     path("demandes/stats/", views.demande_stats, name="demande-stats"),
+    path("demandes/par-ugp/", views.demande_par_ugp, name="demande-par-ugp"),
     path("bons-travail/", views.bon_travail_list, name="bt-list"),
     path("bons-travail/stats/", views.bon_travail_stats, name="bt-stats"),
     # detail last: stats path above must win over the greedy <path:reference>

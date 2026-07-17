@@ -1,5 +1,11 @@
 import { api } from './client'
-import type { Demande, DemandeQuery, DemandeStats, Paginated } from '../types'
+import type {
+  Demande,
+  DemandeParUgp,
+  DemandeQuery,
+  DemandeStats,
+  Paginated,
+} from '../types'
 
 export async function fetchDemandes(
   q: DemandeQuery,
@@ -10,5 +16,10 @@ export async function fetchDemandes(
 
 export async function fetchDemandeStats(): Promise<DemandeStats> {
   const { data } = await api.get<DemandeStats>('/demandes/stats/')
+  return data
+}
+
+export async function fetchDemandesParUgp(): Promise<DemandeParUgp[]> {
+  const { data } = await api.get<DemandeParUgp[]>('/demandes/par-ugp/')
   return data
 }

@@ -664,6 +664,10 @@ SELECT d.num_demande                     AS reference,
        d.num_veh                         AS num_veh,
        d.num_struct                      AS num_struct,
        s.designation                     AS structure,
+       d.num_parc                        AS num_parc,
+       pc.designation                    AS parc,
+       v.genre                           AS genre_code,
+       gv.designation                    AS genre,
        d.nom_utilisateur                 AS demandeur,
        d.accord                          AS statut_code,
        d.date_rdv_reparation             AS date_rdv,
@@ -672,6 +676,9 @@ SELECT d.num_demande                     AS reference,
        concat(d.num_demande, '|', d.num_veh) AS id
 FROM dem_intervention d
 LEFT JOIN structure s ON s.num_struct = d.num_struct
+LEFT JOIN parc pc ON pc.num_parc = d.num_parc
+LEFT JOIN vehicule v ON v.num_veh = d.num_veh
+LEFT JOIN genre_vehicule gv ON gv.genre = v.genre
 """
 
 
@@ -684,6 +691,8 @@ def list_demandes(
     *,
     search: str | None = None,
     num_struct: str | None = None,
+    num_parc: str | None = None,
+    genre: str | None = None,
     statut: str | None = None,
     page: int = 1,
     page_size: int = 20,
@@ -699,6 +708,12 @@ def list_demandes(
     if num_struct:
         where.append("d.num_struct = :num_struct")
         params["num_struct"] = num_struct
+    if num_parc:
+        where.append("d.num_parc = :num_parc")
+        params["num_parc"] = num_parc
+    if genre:
+        where.append("v.genre = :genre")
+        params["genre"] = genre
     if statut:
         where.append("d.accord = :statut")
         params["statut"] = statut
@@ -711,6 +726,25 @@ def list_demandes(
     )
     result["results"] = [_decorate_dem(r) for r in result["results"]]
     return result
+
+
+def demandes_par_ugp() -> list[dict[str, Any]]:
+    """Status breakdown per UGP (parc): one row per parc with a count of
+    demandes in each status. Serves 'liste des statuts par UGP'."""
+    return oracle.fetch_all(
+        """
+        SELECT d.num_parc                                          AS num_parc,
+               COALESCE(pc.designation, '(non affecté)')           AS parc,
+               SUM(CASE WHEN d.accord = '0' THEN 1 ELSE 0 END)     AS en_attente,
+               SUM(CASE WHEN d.accord = '1' THEN 1 ELSE 0 END)     AS finis,
+               SUM(CASE WHEN d.accord = '2' THEN 1 ELSE 0 END)     AS refuses,
+               COUNT(*)                                            AS total
+        FROM dem_intervention d
+        LEFT JOIN parc pc ON pc.num_parc = d.num_parc
+        GROUP BY d.num_parc, pc.designation
+        ORDER BY total DESC
+        """
+    )
 
 
 def demandes_stats() -> dict[str, Any]:

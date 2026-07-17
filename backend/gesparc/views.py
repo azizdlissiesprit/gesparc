@@ -143,6 +143,8 @@ def demande_list(request: Request) -> Response:
     data = queries.list_demandes(
         search=request.query_params.get("search") or None,
         num_struct=request.query_params.get("num_struct") or None,
+        num_parc=request.query_params.get("num_parc") or None,
+        genre=request.query_params.get("genre") or None,
         statut=request.query_params.get("statut") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
@@ -153,6 +155,11 @@ def demande_list(request: Request) -> Response:
 @api_view(["GET"])
 def demande_stats(request: Request) -> Response:
     return Response(queries.demandes_stats())
+
+
+@api_view(["GET"])
+def demande_par_ugp(request: Request) -> Response:
+    return Response(queries.demandes_par_ugp())
 
 
 @api_view(["GET"])

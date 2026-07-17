@@ -4,9 +4,9 @@ import { Button, Card, Input, Select, Space, Table, Tag, Typography } from 'antd
 import type { ColumnsType } from 'antd/es/table'
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
-import { fetchDemandes } from '../api/demandes'
+import { fetchDemandes, fetchDemandesParUgp } from '../api/demandes'
 import { fetchLookup } from '../api/vehicles'
-import type { Demande, LookupItem } from '../types'
+import type { Demande, DemandeParUgp, LookupItem } from '../types'
 import DemandeStatsCards from '../components/DemandeStatsCards'
 
 const { Title } = Typography
@@ -30,6 +30,8 @@ export default function DemandesInterventionPage() {
   const [statut, setStatut] = useState<string | undefined>()
   const [numStruct, setNumStruct] = useState<string | undefined>()
   const [structSearch, setStructSearch] = useState('')
+  const [numParc, setNumParc] = useState<string | undefined>()
+  const [genre, setGenre] = useState<string | undefined>()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
 
@@ -47,14 +49,31 @@ export default function DemandesInterventionPage() {
       fetchLookup('structures', structSearch ? { search: structSearch } : undefined),
     staleTime: 60_000,
   })
+  const { data: parcs } = useQuery({
+    queryKey: ['lookup', 'parcs'],
+    queryFn: () => fetchLookup('parcs'),
+    staleTime: Infinity,
+  })
+  const { data: genres } = useQuery({
+    queryKey: ['lookup', 'genres'],
+    queryFn: () => fetchLookup('genres'),
+    staleTime: Infinity,
+  })
+  const { data: parUgp } = useQuery({
+    queryKey: ['demandes-par-ugp'],
+    queryFn: fetchDemandesParUgp,
+    staleTime: 60_000,
+  })
 
   const { data, isFetching } = useQuery({
-    queryKey: ['demandes', { search, statut, numStruct, page, pageSize }],
+    queryKey: ['demandes', { search, statut, numStruct, numParc, genre, page, pageSize }],
     queryFn: () =>
       fetchDemandes({
         search: search || undefined,
         statut,
         num_struct: numStruct,
+        num_parc: numParc,
+        genre,
         page,
         page_size: pageSize,
       }),
@@ -83,6 +102,21 @@ export default function DemandesInterventionPage() {
         dataIndex: 'structure',
         key: 'structure',
         ellipsis: true,
+      },
+      {
+        title: 'Parc / UGP',
+        dataIndex: 'parc',
+        key: 'parc',
+        width: 170,
+        ellipsis: true,
+        render: (v) => (v ? String(v).trim() : '—'),
+      },
+      {
+        title: 'Type véhicule',
+        dataIndex: 'genre',
+        key: 'genre',
+        width: 140,
+        render: (v) => (v ? <Tag>{String(v).trim()}</Tag> : '—'),
       },
       { title: 'Demandeur', dataIndex: 'demandeur', key: 'demandeur', width: 120 },
       {
@@ -113,8 +147,30 @@ export default function DemandesInterventionPage() {
     setSearch('')
     setStatut(undefined)
     setNumStruct(undefined)
+    setNumParc(undefined)
+    setGenre(undefined)
     setPage(1)
   }
+
+  const parUgpColumns: ColumnsType<DemandeParUgp> = [
+    {
+      title: 'Parc / UGP',
+      dataIndex: 'parc',
+      key: 'parc',
+      render: (v, r) => `${v ?? '—'}${r.num_parc ? ` (${r.num_parc})` : ''}`,
+    },
+    { title: 'En attente', dataIndex: 'en_attente', key: 'en_attente', width: 120, align: 'right' },
+    { title: 'Finis', dataIndex: 'finis', key: 'finis', width: 110, align: 'right' },
+    { title: 'Refusé', dataIndex: 'refuses', key: 'refuses', width: 110, align: 'right' },
+    {
+      title: 'Total',
+      dataIndex: 'total',
+      key: 'total',
+      width: 110,
+      align: 'right',
+      render: (v: number) => <b>{v.toLocaleString('fr-FR')}</b>,
+    },
+  ]
 
   return (
     <div>
@@ -148,6 +204,38 @@ export default function DemandesInterventionPage() {
           <Select
             allowClear
             showSearch
+            optionFilterProp="label"
+            placeholder="Parc / UGP"
+            style={{ width: 220 }}
+            value={numParc}
+            onChange={(v) => {
+              setNumParc(v)
+              setPage(1)
+            }}
+            options={(parcs ?? []).map((p: LookupItem) => ({
+              value: String(p.value),
+              label: String(p.label).trim(),
+            }))}
+          />
+          <Select
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            placeholder="Type véhicule"
+            style={{ width: 180 }}
+            value={genre}
+            onChange={(v) => {
+              setGenre(v)
+              setPage(1)
+            }}
+            options={(genres ?? []).map((g: LookupItem) => ({
+              value: String(g.value),
+              label: String(g.label).trim(),
+            }))}
+          />
+          <Select
+            allowClear
+            showSearch
             placeholder="Structure"
             style={{ width: 300 }}
             value={numStruct}
@@ -175,7 +263,7 @@ export default function DemandesInterventionPage() {
           loading={isFetching}
           columns={columns}
           dataSource={data?.results ?? []}
-          scroll={{ x: 950 }}
+          scroll={{ x: 1250 }}
           pagination={{
             current: page,
             pageSize,
@@ -188,6 +276,21 @@ export default function DemandesInterventionPage() {
               setPageSize(ps)
             },
           }}
+        />
+      </Card>
+
+      <Card
+        title="Répartition des statuts par UGP"
+        style={{ marginTop: 16 }}
+        styles={{ body: { padding: 0 } }}
+      >
+        <Table<DemandeParUgp>
+          rowKey={(r) => r.num_parc ?? '—'}
+          size="small"
+          columns={parUgpColumns}
+          dataSource={parUgp ?? []}
+          pagination={false}
+          scroll={{ x: 640, y: 360 }}
         />
       </Card>
     </div>

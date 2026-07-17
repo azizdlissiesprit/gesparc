@@ -230,6 +230,10 @@ export interface Demande {
   num_veh: string
   num_struct: string | null
   structure: string | null
+  num_parc: string | null
+  parc: string | null
+  genre_code: string | null
+  genre: string | null
   demandeur: string | null
   statut_code: string | null
   statut: string | null
@@ -241,9 +245,20 @@ export interface Demande {
 export interface DemandeQuery {
   search?: string
   num_struct?: string
+  num_parc?: string
+  genre?: string
   statut?: string
   page?: number
   page_size?: number
+}
+
+export interface DemandeParUgp {
+  num_parc: string | null
+  parc: string | null
+  en_attente: number
+  finis: number
+  refuses: number
+  total: number
 }
 
 export interface DemandeStats {
