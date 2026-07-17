@@ -9,6 +9,7 @@ import { fetchLookup } from '../api/vehicles'
 import type { BonTravail, LookupItem } from '../types'
 import BonTravailStatsCards from '../components/BonTravailStatsCards'
 import BonTravailDetailDrawer from '../components/BonTravailDetailDrawer'
+import BtBreakdown from '../components/BtBreakdown'
 
 const { Title } = Typography
 
@@ -246,6 +247,8 @@ export default function BonsTravailPage() {
           }}
         />
       </Card>
+
+      <BtBreakdown />
 
       <BonTravailDetailDrawer
         reference={selected}

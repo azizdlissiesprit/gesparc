@@ -277,6 +277,20 @@ export interface BonTravailStats {
   by_nature: { nature_code: string; nature: string; n: number }[]
 }
 
+export interface BtParAtelier {
+  num_atelier: string | null
+  atelier: string | null
+  num_parc: string | null
+  nb_bt: number
+}
+
+export interface BtParMagasin {
+  num_mag: string | null
+  magasin: string | null
+  num_parc: string | null
+  nb_bt: number
+}
+
 export interface BonCommande {
   reference: string
   date_creation: string | null

@@ -4,6 +4,8 @@ import type {
   BonTravailDetail,
   BonTravailQuery,
   BonTravailStats,
+  BtParAtelier,
+  BtParMagasin,
   Paginated,
 } from '../types'
 
@@ -18,6 +20,16 @@ export async function fetchBonsTravail(
 
 export async function fetchBonTravailStats(): Promise<BonTravailStats> {
   const { data } = await api.get<BonTravailStats>('/bons-travail/stats/')
+  return data
+}
+
+export async function fetchBtParAtelier(): Promise<BtParAtelier[]> {
+  const { data } = await api.get<BtParAtelier[]>('/bons-travail/par-atelier/')
+  return data
+}
+
+export async function fetchBtParMagasin(): Promise<BtParMagasin[]> {
+  const { data } = await api.get<BtParMagasin[]>('/bons-travail/par-magasin/')
   return data
 }
 

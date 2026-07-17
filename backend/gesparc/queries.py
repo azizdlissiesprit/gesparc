@@ -654,6 +654,22 @@ def bons_travail_stats() -> dict[str, Any]:
     return totals
 
 
+def bons_travail_par_atelier() -> list[dict[str, Any]]:
+    """Number of work orders per atelier (from the bt_par_atelier snapshot)."""
+    return oracle.fetch_all(
+        "SELECT num_atelier, atelier, num_parc, nb_bt "
+        "FROM bt_par_atelier ORDER BY nb_bt DESC"
+    )
+
+
+def bons_travail_par_magasin() -> list[dict[str, Any]]:
+    """Number of work orders per magasin (from the bt_par_magasin snapshot)."""
+    return oracle.fetch_all(
+        "SELECT num_mag, magasin, num_parc, nb_bt "
+        "FROM bt_par_magasin ORDER BY nb_bt DESC"
+    )
+
+
 # ---- Demandes d'intervention (maintenance requests) ------------------------
 DEM_STATUT_LABELS = {"0": "En attente", "1": "Finis", "2": "Refusé"}
 

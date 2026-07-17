@@ -125,6 +125,30 @@ CUSTOM_QUERIES = {
         JOIN piece_article pa ON pa.num_piece_int = la.num_piece_int
         LEFT JOIN magasin m ON m.num_mag = pa.num_mag
     """,
+    # Bons de travail per atelier / per magasin. BON_TRAVAIL has no atelier or
+    # magasin column; the link is via PIECE_ARTICLE (parts issued for the work
+    # order): pa.num_bt_int → the BT, pa.num_mag → magasin, and the nat_benef=4
+    # beneficiary → atelier. Small aggregate snapshots (COUNT DISTINCT BT).
+    "bt_par_atelier": """
+        SELECT at.num_atelier_int AS num_atelier,
+               at.designation     AS atelier,
+               at.num_parc        AS num_parc,
+               COUNT(DISTINCT pa.num_bt_int) AS nb_bt
+        FROM piece_article pa
+        JOIN atelier at ON at.num_atelier_int = pa.num_benef AND pa.nat_benef = 4
+        WHERE pa.num_bt_int IS NOT NULL
+        GROUP BY at.num_atelier_int, at.designation, at.num_parc
+    """,
+    "bt_par_magasin": """
+        SELECT m.num_mag      AS num_mag,
+               m.designation  AS magasin,
+               m.num_parc     AS num_parc,
+               COUNT(DISTINCT pa.num_bt_int) AS nb_bt
+        FROM piece_article pa
+        JOIN magasin m ON m.num_mag = pa.num_mag
+        WHERE pa.num_bt_int IS NOT NULL
+        GROUP BY m.num_mag, m.designation, m.num_parc
+    """,
 }
 
 # Helpful indexes for the columns the backend filters / joins on.

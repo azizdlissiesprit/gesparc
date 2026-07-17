@@ -131,6 +131,16 @@ def bon_travail_stats(request: Request) -> Response:
 
 
 @api_view(["GET"])
+def bon_travail_par_atelier(request: Request) -> Response:
+    return Response(queries.bons_travail_par_atelier())
+
+
+@api_view(["GET"])
+def bon_travail_par_magasin(request: Request) -> Response:
+    return Response(queries.bons_travail_par_magasin())
+
+
+@api_view(["GET"])
 def bon_travail_detail(request: Request, reference: str) -> Response:
     row = queries.get_bon_travail(reference)
     if row is None:
