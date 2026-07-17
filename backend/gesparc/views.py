@@ -160,6 +160,8 @@ def bon_commande_list(request: Request) -> Response:
     data = queries.list_bons_commande(
         search=request.query_params.get("search") or None,
         num_fourn=request.query_params.get("num_fourn") or None,
+        num_parc=request.query_params.get("num_parc") or None,
+        article=request.query_params.get("article") or None,
         statut=request.query_params.get("statut") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
@@ -342,6 +344,15 @@ def lookups(request: Request, name: str) -> Response:
     if name == "fournisseurs":
         return Response(
             queries.lookup_fournisseurs(
+                search=request.query_params.get("search") or None,
+                limit=_int_param(request, "limit", 50),
+            )
+        )
+    if name == "parcs":
+        return Response(queries.lookup_parcs())
+    if name == "articles":
+        return Response(
+            queries.lookup_articles(
                 search=request.query_params.get("search") or None,
                 limit=_int_param(request, "limit", 50),
             )

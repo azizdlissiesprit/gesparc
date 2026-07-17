@@ -27,6 +27,9 @@ export default function BonsCommandePage() {
   const [statut, setStatut] = useState<string | undefined>()
   const [numFourn, setNumFourn] = useState<string | undefined>()
   const [fournSearch, setFournSearch] = useState('')
+  const [numParc, setNumParc] = useState<string | undefined>()
+  const [article, setArticle] = useState<string | undefined>()
+  const [articleSearch, setArticleSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [selected, setSelected] = useState<string | null>(null)
@@ -46,13 +49,28 @@ export default function BonsCommandePage() {
     staleTime: 60_000,
   })
 
+  const { data: parcs } = useQuery({
+    queryKey: ['lookup', 'parcs'],
+    queryFn: () => fetchLookup('parcs'),
+    staleTime: Infinity,
+  })
+
+  const { data: articles } = useQuery({
+    queryKey: ['lookup', 'articles', articleSearch],
+    queryFn: () =>
+      fetchLookup('articles', articleSearch ? { search: articleSearch } : undefined),
+    staleTime: 60_000,
+  })
+
   const { data, isFetching } = useQuery({
-    queryKey: ['bons-commande', { search, statut, numFourn, page, pageSize }],
+    queryKey: ['bons-commande', { search, statut, numFourn, numParc, article, page, pageSize }],
     queryFn: () =>
       fetchBonsCommande({
         search: search || undefined,
         statut,
         num_fourn: numFourn,
+        num_parc: numParc,
+        article,
         page,
         page_size: pageSize,
       }),
@@ -83,6 +101,14 @@ export default function BonsCommandePage() {
         render: (v) => (v ? String(v).trim() : '—'),
       },
       { title: 'Parc', dataIndex: 'parc', key: 'parc', ellipsis: true, render: (v) => (v ? String(v).trim() : '—') },
+      {
+        title: 'Nb articles',
+        dataIndex: 'nb_articles',
+        key: 'nb_articles',
+        width: 110,
+        align: 'right',
+        render: (v: number | null) => (v == null ? '—' : v.toLocaleString('fr-FR')),
+      },
       {
         title: 'Montant (TND)',
         dataIndex: 'montant',
@@ -127,6 +153,8 @@ export default function BonsCommandePage() {
     setSearch('')
     setStatut(undefined)
     setNumFourn(undefined)
+    setNumParc(undefined)
+    setArticle(undefined)
     setPage(1)
   }
 
@@ -176,6 +204,39 @@ export default function BonsCommandePage() {
               label: String(s.label).trim(),
             }))}
           />
+          <Select
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            placeholder="Parc / UGP"
+            style={{ width: 220 }}
+            value={numParc}
+            onChange={(v) => {
+              setNumParc(v)
+              setPage(1)
+            }}
+            options={(parcs ?? []).map((p: LookupItem) => ({
+              value: String(p.value),
+              label: String(p.label).trim(),
+            }))}
+          />
+          <Select
+            allowClear
+            showSearch
+            placeholder="Article"
+            style={{ width: 300 }}
+            value={article}
+            filterOption={false}
+            onSearch={setArticleSearch}
+            onChange={(v) => {
+              setArticle(v)
+              setPage(1)
+            }}
+            options={(articles ?? []).map((a: LookupItem) => ({
+              value: String(a.value),
+              label: `${String(a.value)} — ${String(a.label).trim()}`,
+            }))}
+          />
           <Button icon={<ReloadOutlined />} onClick={resetFilters}>
             Réinitialiser
           </Button>
@@ -189,7 +250,7 @@ export default function BonsCommandePage() {
           loading={isFetching}
           columns={columns}
           dataSource={data?.results ?? []}
-          scroll={{ x: 1000 }}
+          scroll={{ x: 1150 }}
           pagination={{
             current: page,
             pageSize,

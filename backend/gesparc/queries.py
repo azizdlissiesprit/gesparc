@@ -747,6 +747,8 @@ SELECT p.num_piece_int                    AS reference,
        p.date_facture                     AS date_facture,
        p.montant_reglement                AS montant_reglement,
        p.date_reglement                   AS date_reglement,
+       (SELECT COUNT(*) FROM v_gesparc_ligne_fournisseur l
+        WHERE l.num_piece_int = p.num_piece_int) AS nb_articles,
        CASE WHEN p.date_livraison IS NOT NULL THEN 'receptionne'
             ELSE 'en_attente' END         AS statut_code
 FROM v_gesparc_piece_fournisseur p
@@ -764,6 +766,8 @@ def list_bons_commande(
     *,
     search: str | None = None,
     num_fourn: str | None = None,
+    num_parc: str | None = None,
+    article: str | None = None,
     statut: str | None = None,
     page: int = 1,
     page_size: int = 20,
@@ -778,6 +782,16 @@ def list_bons_commande(
     if num_fourn:
         where.append("p.num_fourn = :num_fourn")
         params["num_fourn"] = num_fourn
+    if num_parc:
+        where.append("p.num_parc = :num_parc")
+        params["num_parc"] = num_parc
+    if article:
+        # Bons de commande containing a given article (→ count per article).
+        where.append(
+            "EXISTS (SELECT 1 FROM v_gesparc_ligne_fournisseur l "
+            "WHERE l.num_piece_int = p.num_piece_int AND l.num_article = :article)"
+        )
+        params["article"] = article
     if statut == "receptionne":
         where.append("p.date_livraison IS NOT NULL")
     elif statut == "en_attente":
@@ -848,6 +862,31 @@ def lookup_fournisseurs(search: str | None = None, limit: int = 50) -> list[dict
     return oracle.fetch_all(
         "SELECT num_fourn AS value, designation AS label "
         "FROM fournisseur ORDER BY designation LIMIT :limit",
+        {"limit": limit},
+    )
+
+
+def lookup_parcs() -> list[dict]:
+    return oracle.fetch_all(
+        "SELECT num_parc AS value, designation AS label "
+        "FROM parc ORDER BY num_parc"
+    )
+
+
+def lookup_articles(search: str | None = None, limit: int = 50) -> list[dict]:
+    if search:
+        return oracle.fetch_all(
+            """
+            SELECT num_article AS value, designation AS label
+            FROM article
+            WHERE UPPER(designation) LIKE :search OR UPPER(num_article) LIKE :search
+            ORDER BY designation LIMIT :limit
+            """,
+            {"search": f"%{search.upper()}%", "limit": limit},
+        )
+    return oracle.fetch_all(
+        "SELECT num_article AS value, designation AS label "
+        "FROM article ORDER BY designation LIMIT :limit",
         {"limit": limit},
     )
 

@@ -277,6 +277,7 @@ export interface BonCommande {
   date_facture: string | null
   montant_reglement: number | null
   date_reglement: string | null
+  nb_articles: number | null
   statut_code: string | null
   statut: string | null
 }
@@ -298,6 +299,8 @@ export interface BonCommandeDetail extends BonCommande {
 export interface BonCommandeQuery {
   search?: string
   num_fourn?: string
+  num_parc?: string
+  article?: string
   statut?: string
   page?: number
   page_size?: number
