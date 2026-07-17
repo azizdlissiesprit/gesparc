@@ -96,6 +96,35 @@ CUSTOM_QUERIES = {
         FROM ligne_carburant lc
         LEFT JOIN art_carburant ac ON ac.num_art_carb = lc.num_art_carb
     """,
+    # Régulation / mouvements de stock: one row per article movement line
+    # (LIGNE_ARTICLE × PIECE_ARTICLE header). type_mvt 1=entrée, 2=sortie,
+    # 3=régularisation. Magasin resolves the parc (= UGP); beneficiary name
+    # resolved via the header's nat_benef decode (magasin/fournisseur/
+    # structure/atelier), same as the V_GESPARC_PIECE_ARTICLE view.
+    "mouvement_stock": """
+        SELECT ROWNUM AS mvt_id,
+               la.num_piece_int   AS num_piece,
+               pa.date_piece      AS date_piece,
+               pa.type_piece_art  AS type_mvt,
+               la.num_article     AS num_article,
+               la.quantite        AS quantite,
+               la.prix_unitaire   AS prix_unitaire,
+               pa.num_mag         AS num_mag,
+               m.num_parc         AS num_parc,
+               pa.nat_benef       AS nat_benef,
+               pa.num_benef       AS num_benef,
+               decode(pa.nat_benef,
+                  1, (select mm.designation from magasin mm where mm.num_mag = pa.num_benef),
+                  2, (select f.designation from fournisseur f where f.num_fourn = pa.num_benef),
+                  3, (select s.designation from structure s where s.num_struct = pa.num_benef),
+                  4, (select at.designation from atelier at where at.num_atelier_int = pa.num_benef)
+               ) AS beneficiaire,
+               pa.num_bt_int      AS num_bt_int,
+               pa.ref_bc          AS ref_bc
+        FROM ligne_article la
+        JOIN piece_article pa ON pa.num_piece_int = la.num_piece_int
+        LEFT JOIN magasin m ON m.num_mag = pa.num_mag
+    """,
 }
 
 # Helpful indexes for the columns the backend filters / joins on.
@@ -136,6 +165,8 @@ INDEXES = {
     "v_gesparc_exploitation": ["num_veh", "num_plaque", "num_struct", "annee", "mois"],
     # Carburant module
     "ligne_carburant": ["num_veh", "num_plaque", "num_struct", "iu", "energie"],
+    # Régulation du stock module
+    "mouvement_stock": ["num_article", "num_parc", "type_mvt", "num_piece"],
 }
 
 

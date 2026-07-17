@@ -11,6 +11,7 @@ import {
   HomeOutlined,
   SettingOutlined,
   ShoppingCartOutlined,
+  SwapOutlined,
   ToolOutlined,
 } from '@ant-design/icons'
 import DashboardPage from './pages/DashboardPage'
@@ -23,6 +24,7 @@ import SortiesVehiculesPage from './pages/SortiesVehiculesPage'
 import HistoriqueMaintenancePage from './pages/HistoriqueMaintenancePage'
 import BonsCommandePage from './pages/BonsCommandePage'
 import StockArticlesPage from './pages/StockArticlesPage'
+import RegulationStockPage from './pages/RegulationStockPage'
 import OrdresMissionPage from './pages/OrdresMissionPage'
 import FournisseursPage from './pages/FournisseursPage'
 import SinistresPage from './pages/SinistresPage'
@@ -55,6 +57,7 @@ const menuItems: MenuProps['items'] = [
   { key: '/carburant', icon: <DollarOutlined />, label: 'Carburant' },
   { key: '/achat', icon: <ShoppingCartOutlined />, label: 'Achat' },
   { key: '/stock', icon: <DatabaseOutlined />, label: 'Stock' },
+  { key: '/regulation-stock', icon: <SwapOutlined />, label: 'Régulation du stock' },
   {
     key: 'maintenance',
     icon: <ToolOutlined />,
@@ -138,6 +141,7 @@ export default function App() {
             <Route path="/historique" element={<HistoriqueMaintenancePage />} />
             <Route path="/achat" element={<BonsCommandePage />} />
             <Route path="/stock" element={<StockArticlesPage />} />
+            <Route path="/regulation-stock" element={<RegulationStockPage />} />
             <Route path="/missions" element={<OrdresMissionPage />} />
             <Route path="/referentiel" element={<FournisseursPage />} />
             <Route path="/assurances" element={<SinistresPage />} />

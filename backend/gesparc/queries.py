@@ -989,6 +989,97 @@ def get_article(code: str) -> dict[str, Any] | None:
     )
 
 
+# ---- Régulation du stock (mouvements de stock) -----------------------------
+# One row per article movement line (materialized `mouvement_stock`).
+# type_mvt: 1 = entrée, 2 = sortie, 3 = régularisation (inventaire).
+MVT_TYPE_LABELS = {1: "Entrée", 2: "Sortie", 3: "Régularisation"}
+NAT_BENEF_LABELS = {1: "Magasin", 2: "Fournisseur", 3: "Structure", 4: "Atelier"}
+
+_MVT_BASE = """
+SELECT ms.mvt_id            AS id,
+       ms.num_piece         AS num_piece,
+       ms.date_piece        AS date_piece,
+       ms.type_mvt          AS type_code,
+       ms.num_article       AS num_article,
+       a.designation        AS article,
+       ms.quantite          AS quantite,
+       ms.prix_unitaire     AS prix_unitaire,
+       ROUND(COALESCE(ms.quantite, 0) * COALESCE(ms.prix_unitaire, 0), 3) AS montant,
+       ms.num_mag           AS num_mag,
+       ms.num_parc          AS num_parc,
+       pc.designation       AS parc,
+       ms.nat_benef         AS nat_benef_code,
+       ms.beneficiaire      AS beneficiaire
+FROM mouvement_stock ms
+LEFT JOIN article a ON a.num_article = ms.num_article
+LEFT JOIN parc pc ON pc.num_parc = ms.num_parc
+"""
+
+
+def _decorate_mvt(row: dict[str, Any]) -> dict[str, Any]:
+    tc = row.get("type_code")
+    row["type"] = MVT_TYPE_LABELS.get(int(tc), tc) if tc is not None else None
+    nb = row.get("nat_benef_code")
+    row["nat_benef"] = NAT_BENEF_LABELS.get(int(nb), nb) if nb is not None else None
+    return row
+
+
+def list_mouvements_stock(
+    *,
+    search: str | None = None,
+    type_mvt: int | None = None,
+    article: str | None = None,
+    num_parc: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> dict[str, Any]:
+    where: list[str] = []
+    params: dict[str, Any] = {}
+    if search:
+        where.append(
+            "(UPPER(ms.num_article) LIKE :search OR UPPER(a.designation) LIKE :search)"
+        )
+        params["search"] = f"%{search.upper()}%"
+    if type_mvt is not None:
+        where.append("ms.type_mvt = :type_mvt")
+        params["type_mvt"] = type_mvt
+    if article:
+        where.append("ms.num_article = :article")
+        params["article"] = article
+    if num_parc:
+        where.append("ms.num_parc = :num_parc")
+        params["num_parc"] = num_parc
+
+    base = _MVT_BASE
+    if where:
+        base += " WHERE " + " AND ".join(where)
+    result = oracle.paginate(
+        base, params, page=page, page_size=page_size,
+        order_by="date_piece DESC NULLS LAST, num_piece, num_article",
+    )
+    result["results"] = [_decorate_mvt(r) for r in result["results"]]
+    return result
+
+
+def mouvements_stock_stats() -> dict[str, Any]:
+    row = oracle.fetch_one(
+        """
+        SELECT COUNT(*) AS total,
+               SUM(CASE WHEN type_mvt = 1 THEN 1 ELSE 0 END) AS entrees,
+               SUM(CASE WHEN type_mvt = 2 THEN 1 ELSE 0 END) AS sorties,
+               SUM(CASE WHEN type_mvt = 3 THEN 1 ELSE 0 END) AS regularisations,
+               COUNT(DISTINCT num_article) AS nb_articles,
+               COUNT(DISTINCT num_piece) AS nb_pieces
+        FROM mouvement_stock
+        """
+    )
+    return row or {}
+
+
+def lookup_mvt_types() -> list[dict]:
+    return [{"value": k, "label": v} for k, v in MVT_TYPE_LABELS.items()]
+
+
 # ---- Ordres de mission -----------------------------------------------------
 OM_STATUT_LABELS = {"en_cours": "En cours", "terminee": "Terminée"}
 

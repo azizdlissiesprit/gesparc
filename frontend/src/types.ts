@@ -352,6 +352,43 @@ export interface ArticleStats {
   nb_marques: number
 }
 
+export interface MouvementStock {
+  id: number
+  num_piece: string
+  date_piece: string | null
+  type_code: number | null
+  type: string | null
+  num_article: string | null
+  article: string | null
+  quantite: number | null
+  prix_unitaire: number | null
+  montant: number | null
+  num_mag: string | null
+  num_parc: string | null
+  parc: string | null
+  nat_benef_code: number | null
+  nat_benef: string | null
+  beneficiaire: string | null
+}
+
+export interface MvtQuery {
+  search?: string
+  type_mvt?: number
+  article?: string
+  num_parc?: string
+  page?: number
+  page_size?: number
+}
+
+export interface MvtStats {
+  total: number
+  entrees: number
+  sorties: number
+  regularisations: number
+  nb_articles: number
+  nb_pieces: number
+}
+
 export interface OrdreMission {
   num_om: number
   num_plaque: string | null
