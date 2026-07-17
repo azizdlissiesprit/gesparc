@@ -243,6 +243,56 @@ def mouvement_stock_stats(request: Request) -> Response:
 
 
 @api_view(["GET"])
+def bon_sortie_list(request: Request) -> Response:
+    data = queries.list_bons_sortie(
+        search=request.query_params.get("search") or None,
+        mode=request.query_params.get("mode") or None,
+        num_mag=request.query_params.get("num_mag") or None,
+        num_parc=request.query_params.get("num_parc") or None,
+        article=request.query_params.get("article") or None,
+        num_veh=request.query_params.get("num_veh") or None,
+        statut=request.query_params.get("statut") or None,
+        page=_int_param(request, "page", 1),
+        page_size=_int_param(request, "page_size", 20),
+    )
+    return Response(data)
+
+
+@api_view(["GET"])
+def bon_sortie_stats(request: Request) -> Response:
+    return Response(queries.bons_sortie_stats())
+
+
+@api_view(["GET"])
+def bon_sortie_breakdown(request: Request) -> Response:
+    return Response(queries.bons_sortie_breakdown())
+
+
+@api_view(["GET"])
+def reception_list(request: Request) -> Response:
+    data = queries.list_receptions(
+        search=request.query_params.get("search") or None,
+        num_fourn=request.query_params.get("num_fourn") or None,
+        num_parc=request.query_params.get("num_parc") or None,
+        article=request.query_params.get("article") or None,
+        statut=request.query_params.get("statut") or None,
+        page=_int_param(request, "page", 1),
+        page_size=_int_param(request, "page_size", 20),
+    )
+    return Response(data)
+
+
+@api_view(["GET"])
+def reception_stats(request: Request) -> Response:
+    return Response(queries.receptions_stats())
+
+
+@api_view(["GET"])
+def reception_breakdown(request: Request) -> Response:
+    return Response(queries.receptions_breakdown())
+
+
+@api_view(["GET"])
 def ordre_mission_list(request: Request) -> Response:
     data = queries.list_ordres_mission(
         search=request.query_params.get("search") or None,
@@ -400,4 +450,6 @@ def lookups(request: Request, name: str) -> Response:
         return Response(queries.lookup_taxe_natures())
     if name == "mvt-types":
         return Response(queries.lookup_mvt_types())
+    if name == "magasins":
+        return Response(queries.lookup_magasins())
     return Response({"detail": f"Lookup inconnu: {name}"}, status=404)

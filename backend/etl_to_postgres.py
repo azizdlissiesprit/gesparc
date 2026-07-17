@@ -110,6 +110,7 @@ CUSTOM_QUERIES = {
                la.quantite        AS quantite,
                la.prix_unitaire   AS prix_unitaire,
                pa.num_mag         AS num_mag,
+               m.designation      AS magasin,
                m.num_parc         AS num_parc,
                pa.nat_benef       AS nat_benef,
                pa.num_benef       AS num_benef,
@@ -120,10 +121,18 @@ CUSTOM_QUERIES = {
                   4, (select at.designation from atelier at where at.num_atelier_int = pa.num_benef)
                ) AS beneficiaire,
                pa.num_bt_int      AS num_bt_int,
-               pa.ref_bc          AS ref_bc
+               pa.ref_bc          AS ref_bc,
+               -- BT link (for the "bon de sortie pour bon de travail" register):
+               -- the work order's mode (interne/externe), its vehicle (série)
+               -- and whether it is closed (date_fin present).
+               bt.mod             AS bt_mode,
+               bt.num_veh         AS bt_num_veh,
+               CASE WHEN bt.num_bt_int IS NULL THEN NULL
+                    WHEN bt.date_fin IS NULL THEN 0 ELSE 1 END AS bt_cloture
         FROM ligne_article la
         JOIN piece_article pa ON pa.num_piece_int = la.num_piece_int
         LEFT JOIN magasin m ON m.num_mag = pa.num_mag
+        LEFT JOIN bon_travail bt ON bt.num_bt_int = pa.num_bt_int
     """,
     # Bons de travail per atelier / per magasin. BON_TRAVAIL has no atelier or
     # magasin column; the link is via PIECE_ARTICLE (parts issued for the work
@@ -189,8 +198,9 @@ INDEXES = {
     "v_gesparc_exploitation": ["num_veh", "num_plaque", "num_struct", "annee", "mois"],
     # Carburant module
     "ligne_carburant": ["num_veh", "num_plaque", "num_struct", "iu", "energie"],
-    # Régulation du stock module
-    "mouvement_stock": ["num_article", "num_parc", "type_mvt", "num_piece"],
+    # Régulation du stock / Bons de sortie / Réceptions modules
+    "mouvement_stock": ["num_article", "num_parc", "type_mvt", "num_piece",
+                         "num_bt_int", "num_mag", "num_benef", "nat_benef"],
 }
 
 

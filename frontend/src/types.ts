@@ -418,6 +418,97 @@ export interface MvtStats {
   nb_pieces: number
 }
 
+export interface BreakdownRow {
+  label: string
+  nb: number
+  key?: string | number
+}
+
+export interface BonSortie {
+  num_piece: string
+  date_piece: string | null
+  num_mag: string | null
+  magasin: string | null
+  num_parc: string | null
+  parc: string | null
+  mode_code: string | null
+  mode: string | null
+  num_bt_int: string | null
+  num_veh: string | null
+  cloture_code: number | null
+  statut: string | null
+  atelier: string | null
+  nb_articles: number
+  montant: number | null
+}
+
+export interface BonSortieStats {
+  total: number
+  nb_lignes: number
+  nb_articles: number
+  nb_bt: number
+  montant_total: number | null
+}
+
+export interface BonSortieBreakdown {
+  mode: BreakdownRow[]
+  statut: BreakdownRow[]
+  magasin: BreakdownRow[]
+  ugp: BreakdownRow[]
+}
+
+export interface BonSortieQuery {
+  search?: string
+  mode?: string
+  num_mag?: string
+  num_parc?: string
+  article?: string
+  num_veh?: string
+  statut?: string
+  page?: number
+  page_size?: number
+}
+
+export interface Reception {
+  num_piece: string
+  date_piece: string | null
+  num_mag: string | null
+  magasin: string | null
+  num_parc: string | null
+  parc: string | null
+  num_fourn: string | null
+  fournisseur: string | null
+  ref_bc: string | null
+  statut_code: number | null
+  statut: string | null
+  nb_articles: number
+  montant: number | null
+}
+
+export interface ReceptionStats {
+  total: number
+  nb_lignes: number
+  nb_articles: number
+  nb_fournisseurs: number
+  montant_total: number | null
+}
+
+export interface ReceptionBreakdown {
+  statut: BreakdownRow[]
+  parc: BreakdownRow[]
+  fournisseur: BreakdownRow[]
+}
+
+export interface ReceptionQuery {
+  search?: string
+  num_fourn?: string
+  num_parc?: string
+  article?: string
+  statut?: string
+  page?: number
+  page_size?: number
+}
+
 export interface OrdreMission {
   num_om: number
   num_plaque: string | null

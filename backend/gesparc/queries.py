@@ -1130,6 +1130,280 @@ def lookup_mvt_types() -> list[dict]:
     return [{"value": k, "label": v} for k, v in MVT_TYPE_LABELS.items()]
 
 
+def lookup_magasins() -> list[dict]:
+    return oracle.fetch_all(
+        "SELECT DISTINCT num_mag AS value, COALESCE(magasin, num_mag) AS label "
+        "FROM mouvement_stock WHERE num_mag IS NOT NULL ORDER BY 2"
+    )
+
+
+# ---- Bons de sortie (parts issued for a work order) ------------------------
+# A "bon de sortie" is a stock-exit document (PIECE_ARTICLE type=2) issued to
+# fulfil a bon de travail. Header-level view over mouvement_stock, grouped by
+# the piece; the work order supplies mode (interne/externe), the vehicle
+# (série) and whether it is closed.
+BS_MODE_LABELS = {"1": "Interne", "2": "Externe"}
+BS_STATUT_LABELS = {"1": "Clôturé", "0": "Non clôturé"}
+
+_BON_SORTIE_SELECT = """
+SELECT ms.num_piece                        AS num_piece,
+       MAX(ms.date_piece)                  AS date_piece,
+       MAX(ms.num_mag)                     AS num_mag,
+       MAX(ms.magasin)                     AS magasin,
+       MAX(ms.num_parc)                    AS num_parc,
+       MAX(pc.designation)                 AS parc,
+       MAX(ms.bt_mode)                     AS mode_code,
+       MAX(ms.num_bt_int)                  AS num_bt_int,
+       MAX(ms.bt_num_veh)                  AS num_veh,
+       MAX(ms.bt_cloture)                  AS cloture_code,
+       MAX(ms.beneficiaire)                AS atelier,
+       COUNT(*)                            AS nb_articles,
+       ROUND(SUM(COALESCE(ms.quantite, 0) * COALESCE(ms.prix_unitaire, 0)), 3) AS montant
+FROM mouvement_stock ms
+LEFT JOIN parc pc ON pc.num_parc = ms.num_parc
+"""
+
+
+def _decorate_bs(row: dict[str, Any]) -> dict[str, Any]:
+    row["mode"] = BS_MODE_LABELS.get(str(row.get("mode_code")), row.get("mode_code"))
+    cc = row.get("cloture_code")
+    row["statut"] = BS_STATUT_LABELS.get(str(int(cc)), None) if cc is not None else None
+    return row
+
+
+def _bs_where(search, mode, num_mag, num_parc, article, num_veh, statut, params):
+    where = ["ms.type_mvt = 2", "ms.num_bt_int IS NOT NULL"]
+    if search:
+        where.append(
+            "(UPPER(ms.num_piece) LIKE :search OR UPPER(ms.num_bt_int) LIKE :search "
+            "OR UPPER(ms.bt_num_veh) LIKE :search)"
+        )
+        params["search"] = f"%{search.upper()}%"
+    if mode:
+        where.append("ms.bt_mode = :mode_val")
+        params["mode_val"] = mode
+    if num_mag:
+        where.append("ms.num_mag = :num_mag")
+        params["num_mag"] = num_mag
+    if num_parc:
+        where.append("ms.num_parc = :num_parc")
+        params["num_parc"] = num_parc
+    if num_veh:
+        where.append("ms.bt_num_veh = :num_veh")
+        params["num_veh"] = num_veh
+    if statut in ("0", "1"):
+        where.append("ms.bt_cloture = :cloture")
+        params["cloture"] = int(statut)
+    if article:
+        where.append(
+            "ms.num_piece IN (SELECT num_piece FROM mouvement_stock "
+            "WHERE type_mvt = 2 AND num_article = :article)"
+        )
+        params["article"] = article
+    return where
+
+
+def list_bons_sortie(
+    *,
+    search: str | None = None,
+    mode: str | None = None,
+    num_mag: str | None = None,
+    num_parc: str | None = None,
+    article: str | None = None,
+    num_veh: str | None = None,
+    statut: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> dict[str, Any]:
+    params: dict[str, Any] = {}
+    where = _bs_where(search, mode, num_mag, num_parc, article, num_veh, statut, params)
+    base = _BON_SORTIE_SELECT + " WHERE " + " AND ".join(where) + " GROUP BY ms.num_piece"
+    result = oracle.paginate(
+        base, params, page=page, page_size=page_size,
+        order_by="date_piece DESC NULLS LAST, num_piece",
+    )
+    result["results"] = [_decorate_bs(r) for r in result["results"]]
+    return result
+
+
+def bons_sortie_stats() -> dict[str, Any]:
+    row = oracle.fetch_one(
+        """
+        SELECT COUNT(DISTINCT num_piece)  AS total,
+               COUNT(*)                   AS nb_lignes,
+               COUNT(DISTINCT num_article) AS nb_articles,
+               COUNT(DISTINCT num_bt_int) AS nb_bt,
+               COALESCE(SUM(COALESCE(quantite, 0) * COALESCE(prix_unitaire, 0)), 0) AS montant_total
+        FROM mouvement_stock
+        WHERE type_mvt = 2 AND num_bt_int IS NOT NULL
+        """
+    )
+    return row or {}
+
+
+def _bs_breakdown(group_expr: str, label_map: dict | None = None) -> list[dict]:
+    rows = oracle.fetch_all(
+        f"""
+        SELECT {group_expr} AS key, COUNT(DISTINCT num_piece) AS nb
+        FROM mouvement_stock ms
+        WHERE type_mvt = 2 AND num_bt_int IS NOT NULL
+        GROUP BY {group_expr}
+        ORDER BY nb DESC
+        """
+    )
+    if label_map:
+        for r in rows:
+            r["label"] = label_map.get(str(r["key"]), r["key"])
+    return rows
+
+
+def bons_sortie_breakdown() -> dict[str, Any]:
+    par_mode = _bs_breakdown("ms.bt_mode", BS_MODE_LABELS)
+    par_statut = [
+        {**r, "label": BS_STATUT_LABELS.get(str(int(r["key"])) if r["key"] is not None else "", r["key"])}
+        for r in _bs_breakdown("ms.bt_cloture")
+    ]
+    par_magasin = oracle.fetch_all(
+        """
+        SELECT COALESCE(magasin, num_mag) AS label, COUNT(DISTINCT num_piece) AS nb
+        FROM mouvement_stock WHERE type_mvt = 2 AND num_bt_int IS NOT NULL
+        GROUP BY COALESCE(magasin, num_mag) ORDER BY nb DESC
+        """
+    )
+    par_ugp = oracle.fetch_all(
+        """
+        SELECT COALESCE(pc.designation, ms.num_parc, '(non affecté)') AS label,
+               COUNT(DISTINCT ms.num_piece) AS nb
+        FROM mouvement_stock ms LEFT JOIN parc pc ON pc.num_parc = ms.num_parc
+        WHERE ms.type_mvt = 2 AND ms.num_bt_int IS NOT NULL
+        GROUP BY COALESCE(pc.designation, ms.num_parc, '(non affecté)') ORDER BY nb DESC
+        """
+    )
+    return {"mode": par_mode, "statut": par_statut, "magasin": par_magasin, "ugp": par_ugp}
+
+
+# ---- Réceptions de fournisseur (goods received into stock) -----------------
+# A "réception" is a stock-entry document (PIECE_ARTICLE type=1) whose
+# beneficiary is a supplier (nat_benef=2). Header-level view over
+# mouvement_stock. "Statut" = whether it is tied to a purchase order (ref_bc).
+RECEP_STATUT_LABELS = {"1": "Sur commande", "0": "Directe"}
+
+_RECEPTION_SELECT = """
+SELECT ms.num_piece                        AS num_piece,
+       MAX(ms.date_piece)                  AS date_piece,
+       MAX(ms.num_mag)                     AS num_mag,
+       MAX(ms.magasin)                     AS magasin,
+       MAX(ms.num_parc)                    AS num_parc,
+       MAX(pc.designation)                 AS parc,
+       MAX(ms.num_benef)                   AS num_fourn,
+       MAX(ms.beneficiaire)                AS fournisseur,
+       MAX(ms.ref_bc)                      AS ref_bc,
+       MAX(CASE WHEN ms.ref_bc IS NOT NULL THEN 1 ELSE 0 END) AS statut_code,
+       COUNT(*)                            AS nb_articles,
+       ROUND(SUM(COALESCE(ms.quantite, 0) * COALESCE(ms.prix_unitaire, 0)), 3) AS montant
+FROM mouvement_stock ms
+LEFT JOIN parc pc ON pc.num_parc = ms.num_parc
+"""
+
+
+def _decorate_recep(row: dict[str, Any]) -> dict[str, Any]:
+    sc = row.get("statut_code")
+    row["statut"] = RECEP_STATUT_LABELS.get(str(int(sc)), None) if sc is not None else None
+    return row
+
+
+def _recep_where(search, num_fourn, num_parc, article, statut, params):
+    where = ["ms.type_mvt = 1", "ms.nat_benef = 2"]
+    if search:
+        where.append(
+            "(UPPER(ms.num_piece) LIKE :search OR UPPER(ms.beneficiaire) LIKE :search "
+            "OR UPPER(ms.ref_bc) LIKE :search)"
+        )
+        params["search"] = f"%{search.upper()}%"
+    if num_fourn:
+        where.append("ms.num_benef = :num_fourn")
+        params["num_fourn"] = num_fourn
+    if num_parc:
+        where.append("ms.num_parc = :num_parc")
+        params["num_parc"] = num_parc
+    if statut == "1":
+        where.append("ms.ref_bc IS NOT NULL")
+    elif statut == "0":
+        where.append("ms.ref_bc IS NULL")
+    if article:
+        where.append(
+            "ms.num_piece IN (SELECT num_piece FROM mouvement_stock "
+            "WHERE type_mvt = 1 AND num_article = :article)"
+        )
+        params["article"] = article
+    return where
+
+
+def list_receptions(
+    *,
+    search: str | None = None,
+    num_fourn: str | None = None,
+    num_parc: str | None = None,
+    article: str | None = None,
+    statut: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> dict[str, Any]:
+    params: dict[str, Any] = {}
+    where = _recep_where(search, num_fourn, num_parc, article, statut, params)
+    base = _RECEPTION_SELECT + " WHERE " + " AND ".join(where) + " GROUP BY ms.num_piece"
+    result = oracle.paginate(
+        base, params, page=page, page_size=page_size,
+        order_by="date_piece DESC NULLS LAST, num_piece",
+    )
+    result["results"] = [_decorate_recep(r) for r in result["results"]]
+    return result
+
+
+def receptions_stats() -> dict[str, Any]:
+    row = oracle.fetch_one(
+        """
+        SELECT COUNT(DISTINCT num_piece)   AS total,
+               COUNT(*)                    AS nb_lignes,
+               COUNT(DISTINCT num_article) AS nb_articles,
+               COUNT(DISTINCT num_benef)   AS nb_fournisseurs,
+               COALESCE(SUM(COALESCE(quantite, 0) * COALESCE(prix_unitaire, 0)), 0) AS montant_total
+        FROM mouvement_stock
+        WHERE type_mvt = 1 AND nat_benef = 2
+        """
+    )
+    return row or {}
+
+
+def receptions_breakdown() -> dict[str, Any]:
+    par_statut = oracle.fetch_all(
+        """
+        SELECT CASE WHEN ref_bc IS NOT NULL THEN 'Sur commande' ELSE 'Directe' END AS label,
+               COUNT(DISTINCT num_piece) AS nb
+        FROM mouvement_stock WHERE type_mvt = 1 AND nat_benef = 2
+        GROUP BY CASE WHEN ref_bc IS NOT NULL THEN 'Sur commande' ELSE 'Directe' END
+        ORDER BY nb DESC
+        """
+    )
+    par_parc = oracle.fetch_all(
+        """
+        SELECT COALESCE(pc.designation, ms.num_parc, '(non affecté)') AS label,
+               COUNT(DISTINCT ms.num_piece) AS nb
+        FROM mouvement_stock ms LEFT JOIN parc pc ON pc.num_parc = ms.num_parc
+        WHERE ms.type_mvt = 1 AND ms.nat_benef = 2
+        GROUP BY COALESCE(pc.designation, ms.num_parc, '(non affecté)') ORDER BY nb DESC
+        """
+    )
+    par_fournisseur = oracle.fetch_all(
+        """
+        SELECT COALESCE(beneficiaire, num_benef) AS label, COUNT(DISTINCT num_piece) AS nb
+        FROM mouvement_stock WHERE type_mvt = 1 AND nat_benef = 2
+        GROUP BY COALESCE(beneficiaire, num_benef) ORDER BY nb DESC LIMIT 15
+        """
+    )
+    return {"statut": par_statut, "parc": par_parc, "fournisseur": par_fournisseur}
+
+
 # ---- Ordres de mission -----------------------------------------------------
 OM_STATUT_LABELS = {"en_cours": "En cours", "terminee": "Terminée"}
 
