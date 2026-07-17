@@ -717,16 +717,23 @@ export interface OverviewData {
   kpis: {
     vehicules_total: number
     en_circulation: number
+    disponibilite: number
+    age_moyen: number | null
     bons_travail_total: number
     cout_maintenance_total: number
+    cout_moyen_vehicule: number
     reformes_total: number
     reformes_vendus: number
     visites_total: number
     visites_expirees: number
+    taxes_expirees: number
   }
   parc_par_etat: { etat_code: number; etat: string; n: number }[]
   parc_par_energie: { energie: string | null; n: number }[]
+  parc_par_genre: { genre: string | null; n: number }[]
   top_marques: { marque: string | null; n: number }[]
+  top_structures: { structure: string | null; n: number }[]
   bt_par_nature: { nature_code: string; nature: string; n: number }[]
+  cout_composition: { pieces: number; main_oeuvre: number; externe: number }
   cout_maintenance_par_annee: { annee: string; cout: number; nombre: number }[]
 }

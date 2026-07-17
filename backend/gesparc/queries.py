@@ -1923,6 +1923,7 @@ def overview() -> dict[str, Any]:
     rf = reformes_stats()
     vt = visites_techniques_stats()
 
+    # Complete-year window only: recent partial years would show a misleading dip.
     cout_par_annee = oracle.fetch_all(
         """
         SELECT TO_CHAR(date_entree_parc, 'YYYY') AS annee,
@@ -1931,30 +1932,81 @@ def overview() -> dict[str, Any]:
                COUNT(*) AS nombre
         FROM v_gesparc_bon_travail
         WHERE date_entree_parc IS NOT NULL
-          AND EXTRACT(YEAR FROM date_entree_parc) BETWEEN 2012 AND 2100
+          AND EXTRACT(YEAR FROM date_entree_parc) BETWEEN 2016 AND 2025
         GROUP BY TO_CHAR(date_entree_parc, 'YYYY')
         ORDER BY annee
         """
     )
 
+    # Where the maintenance money goes (parts / labour / external repair).
+    cout_composition = oracle.fetch_one(
+        """
+        SELECT COALESCE(SUM(montant_piece), 0)        AS pieces,
+               COALESCE(SUM(montant_main_oeuvre), 0)  AS main_oeuvre,
+               COALESCE(SUM(montant_rep_externe), 0)  AS externe
+        FROM v_gesparc_bon_travail
+        """
+    ) or {}
+
+    parc_par_genre = oracle.fetch_all(
+        """
+        SELECT gv.designation AS genre, COUNT(*) AS n
+        FROM vehicule v
+        LEFT JOIN genre_vehicule gv ON gv.genre = v.genre
+        WHERE gv.designation IS NOT NULL
+        GROUP BY gv.designation
+        ORDER BY n DESC
+        FETCH FIRST 8 ROWS ONLY
+        """
+    )
+
+    top_structures = oracle.fetch_all(
+        """
+        SELECT s.designation AS structure, COUNT(*) AS n
+        FROM vehicule v
+        LEFT JOIN structure s ON s.num_struct = v.num_struct
+        WHERE s.designation IS NOT NULL
+        GROUP BY s.designation
+        ORDER BY n DESC
+        FETCH FIRST 8 ROWS ONLY
+        """
+    )
+
+    age_moyen = oracle.fetch_scalar(
+        "SELECT ROUND(AVG(age_veh), 1) FROM v_gesparc_vehicule WHERE age_veh IS NOT NULL"
+    )
+    taxes_expirees = oracle.fetch_scalar(
+        "SELECT COUNT(*) FROM frais_divers WHERE nat_fd IN (1, 2) "
+        "AND date_valid_fd < CURRENT_DATE"
+    )
+
     en_circulation = next(
         (e["n"] for e in v["by_etat"] if e.get("etat_code") == 1), 0
     )
+    total = v["total"] or 0
+    cout_total = bt["cout_total"] or 0
 
     return {
         "kpis": {
-            "vehicules_total": v["total"],
+            "vehicules_total": total,
             "en_circulation": en_circulation,
+            "disponibilite": round(en_circulation / total * 100, 1) if total else 0,
+            "age_moyen": age_moyen,
             "bons_travail_total": bt["total"],
-            "cout_maintenance_total": bt["cout_total"],
+            "cout_maintenance_total": cout_total,
+            "cout_moyen_vehicule": round(cout_total / total) if total else 0,
             "reformes_total": rf["total"],
             "reformes_vendus": rf["vendus"],
             "visites_total": vt["total"],
             "visites_expirees": vt["expirees"],
+            "taxes_expirees": taxes_expirees or 0,
         },
         "parc_par_etat": v["by_etat"],
         "parc_par_energie": v["by_energie"],
+        "parc_par_genre": parc_par_genre,
         "top_marques": v["by_marque"],
+        "top_structures": top_structures,
         "bt_par_nature": bt["by_nature"],
+        "cout_composition": cout_composition,
         "cout_maintenance_par_annee": cout_par_annee,
     }
