@@ -5,6 +5,24 @@ from typing import Any
 
 from . import db as oracle
 
+# ---- Data-quality rule: implausible monthly distance ------------------------
+# ROOT CAUSE (diagnosed, not guessed): the view derives distance as
+# `index_km_n - index_km_n_1`. When the previous odometer reading is missing —
+# a vehicle's first tracked month, or a gap in tracking — the subtraction has
+# nothing to subtract and km_parc_n becomes the WHOLE ODOMETER. In 99 % of the
+# 3 101 offending months, km_parc_n == index_km_n and the previous index is
+# 0/NULL, which is exactly that signature.
+#
+# The damage is large and one-directional: those ~2 % of months carry ~70 % of
+# all recorded distance, so raw km aggregates run ~3.4x high and make
+# cost-per-km look far better than reality.
+#
+# 20 000 km/month is ~660 km/day sustained — generous for genuine heavy use and
+# well below the erroneous values. Distance aggregates use months at or below
+# it; the offending rows stay visible, flagged and filterable in the UI so they
+# can be fixed at the source instead of quietly disappearing.
+PLAUSIBLE_MONTHLY_KM = 20_000
+
 # ---- Sorting ---------------------------------------------------------------
 # `order_by` is interpolated into the SQL string, so a sort key is NEVER taken
 # from the request directly. It must resolve through one of these allowlists —
@@ -1878,6 +1896,10 @@ SELECT e.annee                 AS annee,
        -- Marque "GE" = Groupe Électrogène (stationary generator, no odometer).
        CASE WHEN TRIM(mv.designation) = 'GE' THEN 'groupe_electrogene'
             ELSE 'vehicule' END AS categorie,
+       -- Flag rather than hide: the row keeps its recorded values (fidelity),
+       -- but the UI can mark it so nobody trusts its km / conso, and a data
+       -- steward can filter to exactly these months to fix them at the source.
+       (e.km_parc_n > """ + str(PLAUSIBLE_MONTHLY_KM) + """) AS anomalie_km,
        concat(e.num_veh, '_', e.annee, '_', e.mois) AS id
 FROM v_gesparc_exploitation e
 LEFT JOIN structure s ON s.num_struct = e.num_struct
@@ -1894,6 +1916,7 @@ def list_exploitation(
     mois: int | None = None,
     num_struct: str | None = None,
     categorie: str | None = None,
+    anomalie: str | None = None,
     sort: str | None = None,
     order: str | None = None,
     page: int = 1,
@@ -1917,6 +1940,10 @@ def list_exploitation(
         where.append("TRIM(mv.designation) = 'GE'")
     elif categorie == "vehicule":
         where.append("COALESCE(TRIM(mv.designation), '') <> 'GE'")
+    if anomalie == "1":
+        where.append(f"e.km_parc_n > {PLAUSIBLE_MONTHLY_KM}")
+    elif anomalie == "0":
+        where.append(f"COALESCE(e.km_parc_n, 0) <= {PLAUSIBLE_MONTHLY_KM}")
 
     base = _EXPL_BASE
     if where:
@@ -1928,13 +1955,32 @@ def list_exploitation(
 
 
 def exploitation_stats() -> dict[str, Any]:
+    """Fleet totals. Distance and consumption are computed over plausible
+    months only (see PLAUSIBLE_MONTHLY_KM) — the raw sums are ~3.4x inflated.
+    `mois_anomalie` reports how many months were excluded, so the correction is
+    visible rather than silent."""
     row = oracle.fetch_one(
-        """
-        SELECT COUNT(*) AS total,
-               COALESCE(SUM(GREATEST(km_parc_n, 0)), 0) AS km_total,
-               COALESCE(SUM(GREATEST(qt_carb_cons_n, 0)), 0) AS carburant_total,
+        f"""
+        SELECT COUNT(*)                AS total,
                COUNT(DISTINCT num_veh) AS vehicules,
-               COUNT(DISTINCT annee) AS annees
+               COUNT(DISTINCT annee)   AS annees,
+               COALESCE(SUM(km_parc_n) FILTER (
+                   WHERE km_parc_n > 0 AND km_parc_n <= {PLAUSIBLE_MONTHLY_KM}
+               ), 0) AS km_total,
+               COALESCE(SUM(qt_carb_cons_n) FILTER (
+                   WHERE km_parc_n > 0 AND km_parc_n <= {PLAUSIBLE_MONTHLY_KM}
+                     AND qt_carb_cons_n > 0
+               ), 0) AS carburant_total,
+               -- Median of monthly ratios: robust to the outliers above, unlike
+               -- a ratio of sums which they would dominate.
+               ROUND(percentile_cont(0.5) WITHIN GROUP (
+                   ORDER BY qt_carb_cons_n / km_parc_n * 100
+               ) FILTER (
+                   WHERE km_parc_n > 0 AND km_parc_n <= {PLAUSIBLE_MONTHLY_KM}
+                     AND qt_carb_cons_n > 0
+               )::numeric, 2) AS conso_mediane,
+               COUNT(*) FILTER (WHERE km_parc_n > {PLAUSIBLE_MONTHLY_KM})
+                   AS mois_anomalie
         FROM v_gesparc_exploitation
         """
     )

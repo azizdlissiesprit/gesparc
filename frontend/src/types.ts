@@ -680,6 +680,8 @@ export interface Exploitation {
   carburant_retourne: number | null
   cmck: number | null
   categorie: string | null
+  /** Month records an implausible distance — its km/conso can't be trusted. */
+  anomalie_km: boolean | null
   id: string
 }
 
@@ -689,6 +691,7 @@ export interface ExploitationQuery {
   mois?: number
   num_struct?: string
   categorie?: string
+  anomalie?: string
   sort?: string
   order?: 'asc' | 'desc'
   page?: number
@@ -701,6 +704,10 @@ export interface ExploitationStats {
   carburant_total: number | null
   vehicules: number
   annees: number
+  /** Median monthly L/100km over plausible months. */
+  conso_mediane: number | null
+  /** Months excluded from the distance figures as data-entry errors. */
+  mois_anomalie: number
 }
 
 export interface LigneCarburant {

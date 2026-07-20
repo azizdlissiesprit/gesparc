@@ -279,7 +279,7 @@ EXPORTS: dict[str, Export] = {
     "exploitation": Export(
         fn=queries.list_exploitation,
         filename="exploitation",
-        str_params=("search", "num_struct", "categorie"),
+        str_params=("search", "num_struct", "categorie", "anomalie"),
         int_params=("annee", "mois"),
         columns=(
             ("annee", "Année"),

@@ -411,6 +411,7 @@ def exploitation_list(request: Request) -> Response:
         mois=_int_param(request, "mois"),
         num_struct=request.query_params.get("num_struct") or None,
         categorie=request.query_params.get("categorie") or None,
+        anomalie=request.query_params.get("anomalie") or None,
         sort=request.query_params.get("sort") or None,
         order=request.query_params.get("order") or None,
         page=_int_param(request, "page", 1),
