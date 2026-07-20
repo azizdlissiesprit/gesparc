@@ -9,6 +9,7 @@ import FournisseurStatsCards from '../components/FournisseurStatsCards'
 import FournisseurDetailDrawer from '../components/FournisseurDetailDrawer'
 import ExportButton from '../components/ExportButton'
 import { tableErrorLocale } from '../utils/tableLocale'
+import { useTableSort } from '../utils/useTableSort'
 
 const { Title } = Typography
 
@@ -25,6 +26,9 @@ export default function FournisseursPage() {
   const [statut, setStatut] = useState<string | undefined>()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const { sort, order, onTableChange, sortable, reset: resetSort } = useTableSort(
+    () => setPage(1),
+  )
   const [selected, setSelected] = useState<string | null>(null)
 
   useEffect(() => {
@@ -36,11 +40,13 @@ export default function FournisseursPage() {
   }, [searchInput])
 
   const { data, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['fournisseurs', { search, statut, page, pageSize }],
+    queryKey: ['fournisseurs', { search, statut, sort, order, page, pageSize }],
     queryFn: () =>
       fetchFournisseurs({
         search: search || undefined,
         statut,
+        sort,
+        order,
         page,
         page_size: pageSize,
       }),
@@ -94,6 +100,7 @@ export default function FournisseursPage() {
   )
 
   const resetFilters = () => {
+    resetSort()
     setSearchInput('')
     setSearch('')
     setStatut(undefined)
@@ -141,7 +148,8 @@ export default function FournisseursPage() {
           rowKey="code"
           size="middle"
           loading={isFetching}
-          columns={columns}
+          onChange={onTableChange}
+          columns={sortable(columns, ['code', 'designation', 'activite', 'tel', 'statut'])}
           dataSource={data?.results ?? []}
           locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1000 }}

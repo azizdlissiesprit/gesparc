@@ -66,6 +66,8 @@ export interface VehicleQuery {
   num_struct?: string
   etat?: number
   categorie?: string
+  sort?: string
+  order?: 'asc' | 'desc'
   page?: number
   page_size?: number
 }
@@ -89,6 +91,8 @@ export interface VisiteQuery {
   search?: string
   num_struct?: string
   statut?: ValidityStatut
+  sort?: string
+  order?: 'asc' | 'desc'
   page?: number
   page_size?: number
 }
@@ -121,6 +125,8 @@ export interface TaxeQuery {
   num_struct?: string
   nature?: number
   statut?: ValidityStatut
+  sort?: string
+  order?: 'asc' | 'desc'
   page?: number
   page_size?: number
 }
@@ -152,6 +158,8 @@ export interface ReformeQuery {
   search?: string
   num_struct?: string
   statut?: ReformeStatut
+  sort?: string
+  order?: 'asc' | 'desc'
   page?: number
   page_size?: number
 }
@@ -190,6 +198,8 @@ export interface BonTravailQuery {
   nature?: string
   mode?: string
   etat?: string
+  sort?: string
+  order?: 'asc' | 'desc'
   page?: number
   page_size?: number
 }
@@ -248,6 +258,8 @@ export interface DemandeQuery {
   num_parc?: string
   genre?: string
   statut?: string
+  sort?: string
+  order?: 'asc' | 'desc'
   page?: number
   page_size?: number
 }
@@ -331,6 +343,8 @@ export interface BonCommandeQuery {
   num_parc?: string
   article?: string
   statut?: string
+  sort?: string
+  order?: 'asc' | 'desc'
   page?: number
   page_size?: number
 }
@@ -369,6 +383,8 @@ export interface ArticleQuery {
   search?: string
   marque?: number
   statut?: string
+  sort?: string
+  order?: 'asc' | 'desc'
   page?: number
   page_size?: number
 }
@@ -405,6 +421,8 @@ export interface MvtQuery {
   type_mvt?: number
   article?: string
   num_parc?: string
+  sort?: string
+  order?: 'asc' | 'desc'
   page?: number
   page_size?: number
 }
@@ -465,6 +483,8 @@ export interface BonSortieQuery {
   article?: string
   num_veh?: string
   statut?: string
+  sort?: string
+  order?: 'asc' | 'desc'
   page?: number
   page_size?: number
 }
@@ -505,6 +525,8 @@ export interface ReceptionQuery {
   num_parc?: string
   article?: string
   statut?: string
+  sort?: string
+  order?: 'asc' | 'desc'
   page?: number
   page_size?: number
 }
@@ -540,6 +562,8 @@ export interface OrdreMissionQuery {
   search?: string
   num_struct?: string
   statut?: string
+  sort?: string
+  order?: 'asc' | 'desc'
   page?: number
   page_size?: number
 }
@@ -576,6 +600,8 @@ export interface FournisseurDetail extends Fournisseur {
 export interface FournisseurQuery {
   search?: string
   statut?: string
+  sort?: string
+  order?: 'asc' | 'desc'
   page?: number
   page_size?: number
 }
@@ -622,6 +648,8 @@ export interface SinistreQuery {
   search?: string
   nature?: number
   statut?: string
+  sort?: string
+  order?: 'asc' | 'desc'
   page?: number
   page_size?: number
 }
@@ -661,6 +689,8 @@ export interface ExploitationQuery {
   mois?: number
   num_struct?: string
   categorie?: string
+  sort?: string
+  order?: 'asc' | 'desc'
   page?: number
   page_size?: number
 }
@@ -701,6 +731,8 @@ export interface CarburantQuery {
   energie?: string
   annee?: number
   categorie?: string
+  sort?: string
+  order?: 'asc' | 'desc'
   page?: number
   page_size?: number
 }

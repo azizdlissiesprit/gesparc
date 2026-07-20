@@ -11,6 +11,7 @@ import OrdreMissionStatsCards from '../components/OrdreMissionStatsCards'
 import OrdreMissionDetailDrawer from '../components/OrdreMissionDetailDrawer'
 import ExportButton from '../components/ExportButton'
 import { tableErrorLocale } from '../utils/tableLocale'
+import { useTableSort } from '../utils/useTableSort'
 
 const { Title } = Typography
 
@@ -29,6 +30,9 @@ export default function OrdresMissionPage() {
   const [structSearch, setStructSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const { sort, order, onTableChange, sortable, reset: resetSort } = useTableSort(
+    () => setPage(1),
+  )
   const [selected, setSelected] = useState<number | null>(null)
 
   useEffect(() => {
@@ -47,12 +51,14 @@ export default function OrdresMissionPage() {
   })
 
   const { data, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['ordres-mission', { search, statut, numStruct, page, pageSize }],
+    queryKey: ['ordres-mission', { search, statut, numStruct, sort, order, page, pageSize }],
     queryFn: () =>
       fetchOrdresMission({
         search: search || undefined,
         statut,
         num_struct: numStruct,
+        sort,
+        order,
         page,
         page_size: pageSize,
       }),
@@ -129,6 +135,7 @@ export default function OrdresMissionPage() {
   )
 
   const resetFilters = () => {
+    resetSort()
     setSearchInput('')
     setSearch('')
     setStatut(undefined)
@@ -194,7 +201,8 @@ export default function OrdresMissionPage() {
           rowKey="num_om"
           size="middle"
           loading={isFetching}
-          columns={columns}
+          onChange={onTableChange}
+          columns={sortable(columns, ['num_om', 'num_plaque', 'structure', 'conducteur', 'destination', 'date_om', 'date_depart', 'date_fin', 'km_depart', 'km_retour', 'statut'])}
           dataSource={data?.results ?? []}
           locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1050 }}

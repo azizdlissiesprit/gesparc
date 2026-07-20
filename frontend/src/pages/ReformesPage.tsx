@@ -10,6 +10,7 @@ import type { LookupItem, ReformeLigne, ReformeStatut } from '../types'
 import ReformeStatsCards from '../components/ReformeStatsCards'
 import ExportButton from '../components/ExportButton'
 import { tableErrorLocale } from '../utils/tableLocale'
+import { useTableSort } from '../utils/useTableSort'
 
 const { Title } = Typography
 
@@ -34,6 +35,9 @@ export default function ReformesPage() {
   const [structSearch, setStructSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const { sort, order, onTableChange, sortable, reset: resetSort } = useTableSort(
+    () => setPage(1),
+  )
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -51,12 +55,14 @@ export default function ReformesPage() {
   })
 
   const { data, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['reformes', { search, statut, numStruct, page, pageSize }],
+    queryKey: ['reformes', { search, statut, numStruct, sort, order, page, pageSize }],
     queryFn: () =>
       fetchReformes({
         search: search || undefined,
         statut,
         num_struct: numStruct,
+        sort,
+        order,
         page,
         page_size: pageSize,
       }),
@@ -121,6 +127,7 @@ export default function ReformesPage() {
   )
 
   const resetFilters = () => {
+    resetSort()
     setSearchInput('')
     setSearch('')
     setStatut(undefined)
@@ -186,7 +193,8 @@ export default function ReformesPage() {
           rowKey="id"
           size="middle"
           loading={isFetching}
-          columns={columns}
+          onChange={onTableChange}
+          columns={sortable(columns, ['num_plaque', 'reference', 'date_reforme', 'date_vente', 'prix_vente', 'structure', 'statut'])}
           dataSource={data?.results ?? []}
           locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1000 }}

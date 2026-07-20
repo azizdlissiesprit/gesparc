@@ -40,6 +40,8 @@ def vehicle_list(request: Request) -> Response:
         num_struct=request.query_params.get("num_struct") or None,
         etat=_int_param(request, "etat"),
         categorie=request.query_params.get("categorie") or None,
+        sort=request.query_params.get("sort") or None,
+        order=request.query_params.get("order") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
     )
@@ -65,6 +67,8 @@ def visite_technique_list(request: Request) -> Response:
         search=request.query_params.get("search") or None,
         num_struct=request.query_params.get("num_struct") or None,
         statut=request.query_params.get("statut") or None,
+        sort=request.query_params.get("sort") or None,
+        order=request.query_params.get("order") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
     )
@@ -83,6 +87,8 @@ def taxe_circulation_list(request: Request) -> Response:
         num_struct=request.query_params.get("num_struct") or None,
         nature=_int_param(request, "nature"),
         statut=request.query_params.get("statut") or None,
+        sort=request.query_params.get("sort") or None,
+        order=request.query_params.get("order") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
     )
@@ -100,6 +106,8 @@ def reforme_list(request: Request) -> Response:
         search=request.query_params.get("search") or None,
         num_struct=request.query_params.get("num_struct") or None,
         statut=request.query_params.get("statut") or None,
+        sort=request.query_params.get("sort") or None,
+        order=request.query_params.get("order") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
     )
@@ -119,6 +127,8 @@ def bon_travail_list(request: Request) -> Response:
         nature=request.query_params.get("nature") or None,
         mode=request.query_params.get("mode") or None,
         etat=request.query_params.get("etat") or None,
+        sort=request.query_params.get("sort") or None,
+        order=request.query_params.get("order") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
     )
@@ -156,6 +166,8 @@ def demande_list(request: Request) -> Response:
         num_parc=request.query_params.get("num_parc") or None,
         genre=request.query_params.get("genre") or None,
         statut=request.query_params.get("statut") or None,
+        sort=request.query_params.get("sort") or None,
+        order=request.query_params.get("order") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
     )
@@ -180,6 +192,8 @@ def bon_commande_list(request: Request) -> Response:
         num_parc=request.query_params.get("num_parc") or None,
         article=request.query_params.get("article") or None,
         statut=request.query_params.get("statut") or None,
+        sort=request.query_params.get("sort") or None,
+        order=request.query_params.get("order") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
     )
@@ -205,6 +219,8 @@ def article_list(request: Request) -> Response:
         search=request.query_params.get("search") or None,
         marque=_int_param(request, "marque"),
         statut=request.query_params.get("statut") or None,
+        sort=request.query_params.get("sort") or None,
+        order=request.query_params.get("order") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
     )
@@ -231,6 +247,8 @@ def mouvement_stock_list(request: Request) -> Response:
         type_mvt=_int_param(request, "type_mvt"),
         article=request.query_params.get("article") or None,
         num_parc=request.query_params.get("num_parc") or None,
+        sort=request.query_params.get("sort") or None,
+        order=request.query_params.get("order") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
     )
@@ -252,6 +270,8 @@ def bon_sortie_list(request: Request) -> Response:
         article=request.query_params.get("article") or None,
         num_veh=request.query_params.get("num_veh") or None,
         statut=request.query_params.get("statut") or None,
+        sort=request.query_params.get("sort") or None,
+        order=request.query_params.get("order") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
     )
@@ -276,6 +296,8 @@ def reception_list(request: Request) -> Response:
         num_parc=request.query_params.get("num_parc") or None,
         article=request.query_params.get("article") or None,
         statut=request.query_params.get("statut") or None,
+        sort=request.query_params.get("sort") or None,
+        order=request.query_params.get("order") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
     )
@@ -298,6 +320,8 @@ def ordre_mission_list(request: Request) -> Response:
         search=request.query_params.get("search") or None,
         num_struct=request.query_params.get("num_struct") or None,
         statut=request.query_params.get("statut") or None,
+        sort=request.query_params.get("sort") or None,
+        order=request.query_params.get("order") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
     )
@@ -322,6 +346,8 @@ def fournisseur_list(request: Request) -> Response:
     data = queries.list_fournisseurs(
         search=request.query_params.get("search") or None,
         statut=request.query_params.get("statut") or None,
+        sort=request.query_params.get("sort") or None,
+        order=request.query_params.get("order") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
     )
@@ -347,6 +373,8 @@ def sinistre_list(request: Request) -> Response:
         search=request.query_params.get("search") or None,
         nature=_int_param(request, "nature"),
         statut=request.query_params.get("statut") or None,
+        sort=request.query_params.get("sort") or None,
+        order=request.query_params.get("order") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
     )
@@ -374,6 +402,8 @@ def exploitation_list(request: Request) -> Response:
         mois=_int_param(request, "mois"),
         num_struct=request.query_params.get("num_struct") or None,
         categorie=request.query_params.get("categorie") or None,
+        sort=request.query_params.get("sort") or None,
+        order=request.query_params.get("order") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
     )
@@ -393,6 +423,8 @@ def carburant_list(request: Request) -> Response:
         energie=request.query_params.get("energie") or None,
         annee=_int_param(request, "annee"),
         categorie=request.query_params.get("categorie") or None,
+        sort=request.query_params.get("sort") or None,
+        order=request.query_params.get("order") or None,
         page=_int_param(request, "page", 1),
         page_size=_int_param(request, "page_size", 20),
     )

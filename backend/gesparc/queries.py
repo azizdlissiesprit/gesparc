@@ -5,6 +5,116 @@ from typing import Any
 
 from . import db as oracle
 
+# ---- Sorting ---------------------------------------------------------------
+# `order_by` is interpolated into the SQL string, so a sort key is NEVER taken
+# from the request directly. It must resolve through one of these allowlists —
+# an unknown key silently falls back to the list's default order. Keeping every
+# allowlist here makes the injection surface reviewable in one place.
+SORTS: dict[str, dict[str, str]] = {
+    "vehicles": {
+        "num_plaque": "num_plaque", "marque": "marque", "type": "type",
+        "genre": "genre", "energie": "energie", "structure": "structure",
+        "beneficiaire": "beneficiaire", "etat": "etat_code",
+        "index_km": "index_km", "age_veh": "age_veh", "categorie": "categorie",
+    },
+    "visites": {
+        "num_plaque": "num_plaque", "structure": "structure",
+        "date_debut": "date_debut", "date_fin": "date_fin",
+        "montant": "montant", "statut": "statut",
+    },
+    "taxes": {
+        "num_plaque": "num_plaque", "nature": "nature_code", "structure": "structure",
+        "date_debut": "date_debut", "date_fin": "date_fin",
+        "montant": "montant", "statut": "statut",
+    },
+    "reformes": {
+        "num_plaque": "num_plaque", "reference": "reference",
+        "date_reforme": "date_reforme", "date_vente": "date_vente",
+        "prix_vente": "prix_vente", "structure": "structure", "statut": "statut",
+    },
+    "bons_travail": {
+        "reference": "reference", "num_plaque": "num_plaque",
+        "structure": "structure", "nature": "nature_code", "mode": "mode_code",
+        "date_entree": "date_entree", "date_sortie": "date_sortie", "cout": "cout",
+    },
+    "demandes": {
+        "reference": "reference", "date_demande": "date_demande",
+        "num_plaque": "num_plaque", "structure": "structure", "parc": "parc",
+        "genre": "genre", "demandeur": "demandeur", "date_rdv": "date_rdv",
+        "statut": "statut_code",
+    },
+    "bons_commande": {
+        "reference": "reference", "date_creation": "date_creation",
+        "fournisseur": "fournisseur", "parc": "parc",
+        "nb_articles": "nb_articles", "montant": "montant", "statut": "statut_code",
+    },
+    "articles": {
+        "code": "code", "designation": "designation", "marque": "marque",
+        "genre": "genre", "prix": "prix", "qte_stock": "qte_stock",
+    },
+    "mouvements": {
+        "date_piece": "date_piece", "type": "type_code", "num_article": "num_article",
+        "article": "article", "quantite": "quantite", "parc": "parc",
+        "beneficiaire": "beneficiaire",
+    },
+    "bons_sortie": {
+        "num_piece": "num_piece", "date_piece": "date_piece",
+        "num_bt_int": "num_bt_int", "mode": "mode_code", "magasin": "magasin",
+        "parc": "parc", "num_veh": "num_veh", "statut": "cloture_code",
+        "nb_articles": "nb_articles", "montant": "montant",
+    },
+    "receptions": {
+        "num_piece": "num_piece", "date_piece": "date_piece",
+        "fournisseur": "fournisseur", "ref_bc": "ref_bc", "parc": "parc",
+        "statut": "statut_code", "nb_articles": "nb_articles", "montant": "montant",
+    },
+    "ordres_mission": {
+        "num_om": "num_om", "num_plaque": "num_plaque", "structure": "structure",
+        "conducteur": "conducteur", "destination": "destination",
+        "date_om": "date_om", "date_depart": "date_depart", "date_fin": "date_fin",
+        "km_depart": "km_depart", "km_retour": "km_retour", "statut": "statut_code",
+    },
+    "fournisseurs": {
+        "code": "code", "designation": "designation", "activite": "activite",
+        "tel": "tel", "statut": "statut",
+    },
+    "sinistres": {
+        "num_sin": "num_sin", "num_plaque": "num_plaque", "structure": "structure",
+        "cause": "cause", "nature": "nature_code", "date_sinistre": "date_sinistre",
+        "montant_rep": "montant_rep", "montant_indem": "montant_indem",
+        "statut": "statut_code",
+    },
+    "exploitation": {
+        "annee": "annee", "mois": "mois", "num_plaque": "num_plaque",
+        "structure": "structure", "energie": "energie", "index_km": "index_km",
+        "km_parcourus": "km_parcourus", "carburant_consomme": "carburant_consomme",
+        "cmck": "cmck", "categorie": "categorie",
+    },
+    "carburant": {
+        "date_piece": "date_piece", "num_plaque": "num_plaque",
+        "structure": "structure", "beneficiaire": "beneficiaire",
+        "energie": "energie", "quantite": "quantite",
+        "prix_unitaire": "prix_unitaire", "montant": "montant",
+        "categorie": "categorie",
+    },
+}
+
+
+def _order(
+    sort: str | None, order: str | None, allowed: dict[str, str], default: str
+) -> str:
+    """Resolve a requested sort into a safe ORDER BY body.
+
+    Unknown keys fall back to `default` rather than erroring: a stale bookmark
+    should still render a list. `default` is appended as a tiebreaker so
+    pagination stays stable when the sorted column has duplicate values.
+    """
+    column = allowed.get((sort or "").strip())
+    if not column:
+        return default
+    direction = "DESC" if str(order or "").lower().startswith("desc") else "ASC"
+    return f"{column} {direction} NULLS LAST, {default}"
+
 # Vehicle status codes as computed by the V_GESPARC_VEHICULE view.
 ETAT_LABELS: dict[int, str] = {
     1: "en circulation",
@@ -60,6 +170,8 @@ def list_vehicles(
     num_struct: str | None = None,
     etat: int | None = None,
     categorie: str | None = None,
+    sort: str | None = None,
+    order: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict[str, Any]:
@@ -102,7 +214,7 @@ def list_vehicles(
     )
 
     result = oracle.paginate(
-        base, params, page=page, page_size=page_size, order_by="num_plaque ASC"
+        base, params, page=page, page_size=page_size, order_by=_order(sort, order, SORTS["vehicles"], "num_plaque ASC")
     )
     for r in result["results"]:
         r.pop("rnk__", None)
@@ -291,6 +403,8 @@ def list_visites_techniques(
     search: str | None = None,
     num_struct: str | None = None,
     statut: str | None = None,
+    sort: str | None = None,
+    order: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict[str, Any]:
@@ -310,7 +424,7 @@ def list_visites_techniques(
 
     base = _VISITE_BASE + " WHERE " + " AND ".join(where)
     return oracle.paginate(
-        base, params, page=page, page_size=page_size, order_by="date_fin DESC"
+        base, params, page=page, page_size=page_size, order_by=_order(sort, order, SORTS["visites"], "date_fin DESC")
     )
 
 
@@ -373,6 +487,8 @@ def list_taxes_circulation(
     num_struct: str | None = None,
     nature: int | None = None,
     statut: str | None = None,
+    sort: str | None = None,
+    order: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict[str, Any]:
@@ -395,7 +511,7 @@ def list_taxes_circulation(
     base = _TAXE_BASE + " WHERE " + " AND ".join(where)
     result = oracle.paginate(
         base, params, page=page, page_size=page_size,
-        order_by="date_fin DESC NULLS LAST",
+        order_by=_order(sort, order, SORTS["taxes"], "date_fin DESC NULLS LAST"),
     )
     result["results"] = [_decorate_taxe(r) for r in result["results"]]
     return result
@@ -449,6 +565,8 @@ def list_reformes(
     search: str | None = None,
     num_struct: str | None = None,
     statut: str | None = None,
+    sort: str | None = None,
+    order: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict[str, Any]:
@@ -473,7 +591,7 @@ def list_reformes(
     if where:
         base += " WHERE " + " AND ".join(where)
     return oracle.paginate(
-        base, params, page=page, page_size=page_size, order_by="date_reforme DESC"
+        base, params, page=page, page_size=page_size, order_by=_order(sort, order, SORTS["reformes"], "date_reforme DESC")
     )
 
 
@@ -535,6 +653,8 @@ def list_bons_travail(
     nature: str | None = None,
     mode: str | None = None,
     etat: str | None = None,
+    sort: str | None = None,
+    order: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict[str, Any]:
@@ -566,7 +686,7 @@ def list_bons_travail(
     if where:
         base += " WHERE " + " AND ".join(where)
     result = oracle.paginate(
-        base, params, page=page, page_size=page_size, order_by="date_entree DESC"
+        base, params, page=page, page_size=page_size, order_by=_order(sort, order, SORTS["bons_travail"], "date_entree DESC")
     )
     result["results"] = [_decorate_bt(r) for r in result["results"]]
     return result
@@ -710,6 +830,8 @@ def list_demandes(
     num_parc: str | None = None,
     genre: str | None = None,
     statut: str | None = None,
+    sort: str | None = None,
+    order: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict[str, Any]:
@@ -738,7 +860,7 @@ def list_demandes(
     if where:
         base += " WHERE " + " AND ".join(where)
     result = oracle.paginate(
-        base, params, page=page, page_size=page_size, order_by="date_demande DESC"
+        base, params, page=page, page_size=page_size, order_by=_order(sort, order, SORTS["demandes"], "date_demande DESC")
     )
     result["results"] = [_decorate_dem(r) for r in result["results"]]
     return result
@@ -819,6 +941,8 @@ def list_bons_commande(
     num_parc: str | None = None,
     article: str | None = None,
     statut: str | None = None,
+    sort: str | None = None,
+    order: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict[str, Any]:
@@ -852,7 +976,7 @@ def list_bons_commande(
         base += " WHERE " + " AND ".join(where)
     result = oracle.paginate(
         base, params, page=page, page_size=page_size,
-        order_by="date_creation DESC NULLS LAST",
+        order_by=_order(sort, order, SORTS["bons_commande"], "date_creation DESC NULLS LAST"),
     )
     result["results"] = [_decorate_bc(r) for r in result["results"]]
     return result
@@ -965,6 +1089,8 @@ def list_articles(
     search: str | None = None,
     marque: int | None = None,
     statut: str | None = None,
+    sort: str | None = None,
+    order: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict[str, Any]:
@@ -988,7 +1114,7 @@ def list_articles(
     if where:
         base += " WHERE " + " AND ".join(where)
     return oracle.paginate(
-        base, params, page=page, page_size=page_size, order_by="designation ASC"
+        base, params, page=page, page_size=page_size, order_by=_order(sort, order, SORTS["articles"], "designation ASC")
     )
 
 
@@ -1080,6 +1206,8 @@ def list_mouvements_stock(
     type_mvt: int | None = None,
     article: str | None = None,
     num_parc: str | None = None,
+    sort: str | None = None,
+    order: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict[str, Any]:
@@ -1105,7 +1233,7 @@ def list_mouvements_stock(
         base += " WHERE " + " AND ".join(where)
     result = oracle.paginate(
         base, params, page=page, page_size=page_size,
-        order_by="date_piece DESC NULLS LAST, num_piece, num_article",
+        order_by=_order(sort, order, SORTS["mouvements"], "date_piece DESC NULLS LAST, num_piece, num_article"),
     )
     result["results"] = [_decorate_mvt(r) for r in result["results"]]
     return result
@@ -1212,6 +1340,8 @@ def list_bons_sortie(
     article: str | None = None,
     num_veh: str | None = None,
     statut: str | None = None,
+    sort: str | None = None,
+    order: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict[str, Any]:
@@ -1220,7 +1350,7 @@ def list_bons_sortie(
     base = _BON_SORTIE_SELECT + " WHERE " + " AND ".join(where) + " GROUP BY ms.num_piece"
     result = oracle.paginate(
         base, params, page=page, page_size=page_size,
-        order_by="date_piece DESC NULLS LAST, num_piece",
+        order_by=_order(sort, order, SORTS["bons_sortie"], "date_piece DESC NULLS LAST, num_piece"),
     )
     result["results"] = [_decorate_bs(r) for r in result["results"]]
     return result
@@ -1346,6 +1476,8 @@ def list_receptions(
     num_parc: str | None = None,
     article: str | None = None,
     statut: str | None = None,
+    sort: str | None = None,
+    order: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict[str, Any]:
@@ -1354,7 +1486,7 @@ def list_receptions(
     base = _RECEPTION_SELECT + " WHERE " + " AND ".join(where) + " GROUP BY ms.num_piece"
     result = oracle.paginate(
         base, params, page=page, page_size=page_size,
-        order_by="date_piece DESC NULLS LAST, num_piece",
+        order_by=_order(sort, order, SORTS["receptions"], "date_piece DESC NULLS LAST, num_piece"),
     )
     result["results"] = [_decorate_recep(r) for r in result["results"]]
     return result
@@ -1440,6 +1572,8 @@ def list_ordres_mission(
     search: str | None = None,
     num_struct: str | None = None,
     statut: str | None = None,
+    sort: str | None = None,
+    order: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict[str, Any]:
@@ -1465,7 +1599,7 @@ def list_ordres_mission(
         base += " WHERE " + " AND ".join(where)
     result = oracle.paginate(
         base, params, page=page, page_size=page_size,
-        order_by="date_depart DESC NULLS LAST, num_om DESC",
+        order_by=_order(sort, order, SORTS["ordres_mission"], "date_depart DESC NULLS LAST, num_om DESC"),
     )
     result["results"] = [_decorate_om(r) for r in result["results"]]
     return result
@@ -1526,6 +1660,8 @@ def list_fournisseurs(
     *,
     search: str | None = None,
     statut: str | None = None,
+    sort: str | None = None,
+    order: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict[str, Any]:
@@ -1547,7 +1683,7 @@ def list_fournisseurs(
     if where:
         base += " WHERE " + " AND ".join(where)
     result = oracle.paginate(
-        base, params, page=page, page_size=page_size, order_by="designation ASC"
+        base, params, page=page, page_size=page_size, order_by=_order(sort, order, SORTS["fournisseurs"], "designation ASC")
     )
     result["results"] = [_decorate_fourn(r) for r in result["results"]]
     return result
@@ -1630,6 +1766,8 @@ def list_sinistres(
     search: str | None = None,
     nature: int | None = None,
     statut: str | None = None,
+    sort: str | None = None,
+    order: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict[str, Any]:
@@ -1656,7 +1794,7 @@ def list_sinistres(
         base += " WHERE " + " AND ".join(where)
     result = oracle.paginate(
         base, params, page=page, page_size=page_size,
-        order_by="date_sinistre DESC NULLS LAST",
+        order_by=_order(sort, order, SORTS["sinistres"], "date_sinistre DESC NULLS LAST"),
     )
     result["results"] = [_decorate_sin(r) for r in result["results"]]
     return result
@@ -1756,6 +1894,8 @@ def list_exploitation(
     mois: int | None = None,
     num_struct: str | None = None,
     categorie: str | None = None,
+    sort: str | None = None,
+    order: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict[str, Any]:
@@ -1783,7 +1923,7 @@ def list_exploitation(
         base += " WHERE " + " AND ".join(where)
     return oracle.paginate(
         base, params, page=page, page_size=page_size,
-        order_by="annee DESC, mois DESC, num_plaque",
+        order_by=_order(sort, order, SORTS["exploitation"], "annee DESC, mois DESC, num_plaque"),
     )
 
 
@@ -1855,6 +1995,8 @@ def list_carburant(
     energie: str | None = None,
     annee: int | None = None,
     categorie: str | None = None,
+    sort: str | None = None,
+    order: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict[str, Any]:
@@ -1885,7 +2027,7 @@ def list_carburant(
         base += " WHERE " + " AND ".join(where)
     result = oracle.paginate(
         base, params, page=page, page_size=page_size,
-        order_by="date_piece DESC NULLS LAST, num_ligne_carb",
+        order_by=_order(sort, order, SORTS["carburant"], "date_piece DESC NULLS LAST, num_ligne_carb"),
     )
     result["results"] = [_decorate_carb(r) for r in result["results"]]
     return result

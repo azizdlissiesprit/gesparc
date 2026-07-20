@@ -10,6 +10,7 @@ import SinistreStatsCards from '../components/SinistreStatsCards'
 import SinistreDetailDrawer from '../components/SinistreDetailDrawer'
 import ExportButton from '../components/ExportButton'
 import { tableErrorLocale } from '../utils/tableLocale'
+import { useTableSort } from '../utils/useTableSort'
 
 const { Title } = Typography
 
@@ -35,6 +36,9 @@ export default function SinistresPage() {
   const [statut, setStatut] = useState<string | undefined>()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const { sort, order, onTableChange, sortable, reset: resetSort } = useTableSort(
+    () => setPage(1),
+  )
   const [selected, setSelected] = useState<string | null>(null)
 
   useEffect(() => {
@@ -46,12 +50,14 @@ export default function SinistresPage() {
   }, [searchInput])
 
   const { data, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['sinistres', { search, nature, statut, page, pageSize }],
+    queryKey: ['sinistres', { search, nature, statut, sort, order, page, pageSize }],
     queryFn: () =>
       fetchSinistres({
         search: search || undefined,
         nature,
         statut,
+        sort,
+        order,
         page,
         page_size: pageSize,
       }),
@@ -131,6 +137,7 @@ export default function SinistresPage() {
   )
 
   const resetFilters = () => {
+    resetSort()
     setSearchInput('')
     setSearch('')
     setNature(undefined)
@@ -190,7 +197,8 @@ export default function SinistresPage() {
           rowKey="num_sin"
           size="middle"
           loading={isFetching}
-          columns={columns}
+          onChange={onTableChange}
+          columns={sortable(columns, ['num_sin', 'num_plaque', 'structure', 'cause', 'nature', 'date_sinistre', 'montant_rep', 'montant_indem', 'statut'])}
           dataSource={data?.results ?? []}
           locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1050 }}

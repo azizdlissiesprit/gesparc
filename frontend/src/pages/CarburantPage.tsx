@@ -11,6 +11,7 @@ import CarburantStatsCards from '../components/CarburantStatsCards'
 import CarburantDetailDrawer from '../components/CarburantDetailDrawer'
 import ExportButton from '../components/ExportButton'
 import { tableErrorLocale } from '../utils/tableLocale'
+import { useTableSort } from '../utils/useTableSort'
 
 const { Title } = Typography
 
@@ -29,6 +30,9 @@ export default function CarburantPage() {
   const [categorie, setCategorie] = useState<string | undefined>()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const { sort, order, onTableChange, sortable, reset: resetSort } = useTableSort(
+    () => setPage(1),
+  )
   const [selected, setSelected] = useState<LigneCarburant | null>(null)
 
   useEffect(() => {
@@ -57,7 +61,7 @@ export default function CarburantPage() {
   })
 
   const { data, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['carburant', { search, energie, annee, numStruct, categorie, page, pageSize }],
+    queryKey: ['carburant', { search, energie, annee, numStruct, categorie, sort, order, page, pageSize }],
     queryFn: () =>
       fetchCarburant({
         search: search || undefined,
@@ -65,6 +69,8 @@ export default function CarburantPage() {
         annee,
         num_struct: numStruct,
         categorie,
+        sort,
+        order,
         page,
         page_size: pageSize,
       }),
@@ -156,6 +162,7 @@ export default function CarburantPage() {
   )
 
   const resetFilters = () => {
+    resetSort()
     setSearchInput('')
     setSearch('')
     setEnergie(undefined)
@@ -251,7 +258,8 @@ export default function CarburantPage() {
           rowKey="id"
           size="middle"
           loading={isFetching}
-          columns={columns}
+          onChange={onTableChange}
+          columns={sortable(columns, ['date_piece', 'num_plaque', 'structure', 'beneficiaire', 'energie', 'quantite', 'prix_unitaire', 'montant', 'categorie'])}
           dataSource={data?.results ?? []}
           locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1200 }}

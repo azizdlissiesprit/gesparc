@@ -10,6 +10,7 @@ import type { LookupItem, MouvementStock } from '../types'
 import MvtStatsCards from '../components/MvtStatsCards'
 import ExportButton from '../components/ExportButton'
 import { tableErrorLocale } from '../utils/tableLocale'
+import { useTableSort } from '../utils/useTableSort'
 
 const { Title } = Typography
 
@@ -30,6 +31,9 @@ export default function RegulationStockPage() {
   const [numParc, setNumParc] = useState<string | undefined>()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const { sort, order, onTableChange, sortable, reset: resetSort } = useTableSort(
+    () => setPage(1),
+  )
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -57,13 +61,15 @@ export default function RegulationStockPage() {
   })
 
   const { data, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['mouvements', { search, typeMvt, article, numParc, page, pageSize }],
+    queryKey: ['mouvements', { search, typeMvt, article, numParc, sort, order, page, pageSize }],
     queryFn: () =>
       fetchMouvements({
         search: search || undefined,
         type_mvt: typeMvt,
         article,
         num_parc: numParc,
+        sort,
+        order,
         page,
         page_size: pageSize,
       }),
@@ -138,6 +144,7 @@ export default function RegulationStockPage() {
   )
 
   const resetFilters = () => {
+    resetSort()
     setSearchInput('')
     setSearch('')
     setTypeMvt(undefined)
@@ -223,7 +230,8 @@ export default function RegulationStockPage() {
           rowKey="id"
           size="middle"
           loading={isFetching}
-          columns={columns}
+          onChange={onTableChange}
+          columns={sortable(columns, ['date_piece', 'type', 'num_article', 'article', 'quantite', 'parc', 'beneficiaire'])}
           dataSource={data?.results ?? []}
           locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1150 }}

@@ -10,6 +10,7 @@ import type { BonTravail, LookupItem } from '../types'
 import BonTravailDetailDrawer from '../components/BonTravailDetailDrawer'
 import ExportButton from '../components/ExportButton'
 import { tableErrorLocale } from '../utils/tableLocale'
+import { useTableSort } from '../utils/useTableSort'
 
 const { Title } = Typography
 
@@ -35,6 +36,9 @@ export default function HistoriqueMaintenancePage() {
   const [structSearch, setStructSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const { sort, order, onTableChange, sortable, reset: resetSort } = useTableSort(
+    () => setPage(1),
+  )
   const [selected, setSelected] = useState<string | null>(null)
 
   useEffect(() => {
@@ -53,13 +57,15 @@ export default function HistoriqueMaintenancePage() {
   })
 
   const { data, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['historique', { search, nature, mode, numStruct, page, pageSize }],
+    queryKey: ['historique', { search, nature, mode, numStruct, sort, order, page, pageSize }],
     queryFn: () =>
       fetchBonsTravail({
         search: search || undefined,
         nature,
         mode,
         num_struct: numStruct,
+        sort,
+        order,
         page,
         page_size: pageSize,
       }),
@@ -134,6 +140,7 @@ export default function HistoriqueMaintenancePage() {
   )
 
   const resetFilters = () => {
+    resetSort()
     setSearchInput('')
     setSearch('')
     setNature(undefined)
@@ -209,7 +216,8 @@ export default function HistoriqueMaintenancePage() {
           rowKey="reference"
           size="middle"
           loading={isFetching}
-          columns={columns}
+          onChange={onTableChange}
+          columns={sortable(columns, ['reference', 'num_plaque', 'structure', 'nature', 'mode', 'date_entree', 'date_sortie', 'cout'])}
           dataSource={data?.results ?? []}
           locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1050 }}

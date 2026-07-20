@@ -9,6 +9,7 @@ import { fetchLookup } from '../api/vehicles'
 import type { BonTravail, LookupItem } from '../types'
 import ExportButton from '../components/ExportButton'
 import { tableErrorLocale } from '../utils/tableLocale'
+import { useTableSort } from '../utils/useTableSort'
 
 const { Title } = Typography
 
@@ -28,6 +29,9 @@ export default function SortiesVehiculesPage() {
   const [structSearch, setStructSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const { sort, order, onTableChange, sortable, reset: resetSort } = useTableSort(
+    () => setPage(1),
+  )
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -45,12 +49,14 @@ export default function SortiesVehiculesPage() {
   })
 
   const { data, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['sorties', { search, etat, numStruct, page, pageSize }],
+    queryKey: ['sorties', { search, etat, numStruct, sort, order, page, pageSize }],
     queryFn: () =>
       fetchBonsTravail({
         search: search || undefined,
         etat,
         num_struct: numStruct,
+        sort,
+        order,
         page,
         page_size: pageSize,
       }),
@@ -106,6 +112,7 @@ export default function SortiesVehiculesPage() {
   )
 
   const resetFilters = () => {
+    resetSort()
     setSearchInput('')
     setSearch('')
     setEtat(undefined)
@@ -169,7 +176,8 @@ export default function SortiesVehiculesPage() {
           rowKey="reference"
           size="middle"
           loading={isFetching}
-          columns={columns}
+          onChange={onTableChange}
+          columns={sortable(columns, ['reference', 'num_plaque', 'structure', 'nature', 'mode', 'date_entree', 'date_sortie', 'cout'])}
           dataSource={data?.results ?? []}
           locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1000 }}

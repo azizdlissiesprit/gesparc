@@ -10,6 +10,7 @@ import ArticleStatsCards from '../components/ArticleStatsCards'
 import ArticleDetailDrawer from '../components/ArticleDetailDrawer'
 import ExportButton from '../components/ExportButton'
 import { tableErrorLocale } from '../utils/tableLocale'
+import { useTableSort } from '../utils/useTableSort'
 
 const { Title } = Typography
 
@@ -29,6 +30,9 @@ export default function StockArticlesPage() {
   const [statut, setStatut] = useState<string | undefined>()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const { sort, order, onTableChange, sortable, reset: resetSort } = useTableSort(
+    () => setPage(1),
+  )
   const [selected, setSelected] = useState<string | null>(null)
 
   useEffect(() => {
@@ -46,12 +50,14 @@ export default function StockArticlesPage() {
   })
 
   const { data, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['articles', { search, marque, statut, page, pageSize }],
+    queryKey: ['articles', { search, marque, statut, sort, order, page, pageSize }],
     queryFn: () =>
       fetchArticles({
         search: search || undefined,
         marque,
         statut,
+        sort,
+        order,
         page,
         page_size: pageSize,
       }),
@@ -123,6 +129,7 @@ export default function StockArticlesPage() {
   )
 
   const resetFilters = () => {
+    resetSort()
     setSearchInput('')
     setSearch('')
     setMarque(undefined)
@@ -187,7 +194,8 @@ export default function StockArticlesPage() {
           rowKey="code"
           size="middle"
           loading={isFetching}
-          columns={columns}
+          onChange={onTableChange}
+          columns={sortable(columns, ['code', 'designation', 'marque', 'genre', 'prix', 'qte_stock'])}
           dataSource={data?.results ?? []}
           locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1050 }}

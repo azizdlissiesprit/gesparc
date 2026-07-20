@@ -11,6 +11,7 @@ import { STATUT_META, STATUT_OPTIONS } from '../utils/statut'
 import VisiteStatsCards from '../components/VisiteStatsCards'
 import ExportButton from '../components/ExportButton'
 import { tableErrorLocale } from '../utils/tableLocale'
+import { useTableSort } from '../utils/useTableSort'
 
 const { Title } = Typography
 
@@ -27,6 +28,9 @@ export default function VisitesTechniquesPage() {
   const [structSearch, setStructSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const { sort, order, onTableChange, sortable, reset: resetSort } = useTableSort(
+    () => setPage(1),
+  )
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -44,12 +48,14 @@ export default function VisitesTechniquesPage() {
   })
 
   const { data, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['visites', { search, statut, numStruct, page, pageSize }],
+    queryKey: ['visites', { search, statut, numStruct, sort, order, page, pageSize }],
     queryFn: () =>
       fetchVisites({
         search: search || undefined,
         statut,
         num_struct: numStruct,
+        sort,
+        order,
         page,
         page_size: pageSize,
       }),
@@ -107,6 +113,7 @@ export default function VisitesTechniquesPage() {
   )
 
   const resetFilters = () => {
+    resetSort()
     setSearchInput('')
     setSearch('')
     setStatut(undefined)
@@ -172,7 +179,8 @@ export default function VisitesTechniquesPage() {
           rowKey="id"
           size="middle"
           loading={isFetching}
-          columns={columns}
+          onChange={onTableChange}
+          columns={sortable(columns, ['num_plaque', 'structure', 'date_debut', 'date_fin', 'montant', 'statut'])}
           dataSource={data?.results ?? []}
           locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 900 }}

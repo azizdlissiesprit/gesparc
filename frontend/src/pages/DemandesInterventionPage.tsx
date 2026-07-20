@@ -10,6 +10,7 @@ import type { Demande, DemandeParUgp, LookupItem } from '../types'
 import DemandeStatsCards from '../components/DemandeStatsCards'
 import ExportButton from '../components/ExportButton'
 import { tableErrorLocale } from '../utils/tableLocale'
+import { useTableSort } from '../utils/useTableSort'
 
 const { Title } = Typography
 
@@ -36,6 +37,9 @@ export default function DemandesInterventionPage() {
   const [genre, setGenre] = useState<string | undefined>()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const { sort, order, onTableChange, sortable, reset: resetSort } = useTableSort(
+    () => setPage(1),
+  )
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -68,7 +72,7 @@ export default function DemandesInterventionPage() {
   })
 
   const { data, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['demandes', { search, statut, numStruct, numParc, genre, page, pageSize }],
+    queryKey: ['demandes', { search, statut, numStruct, numParc, genre, sort, order, page, pageSize }],
     queryFn: () =>
       fetchDemandes({
         search: search || undefined,
@@ -76,6 +80,8 @@ export default function DemandesInterventionPage() {
         num_struct: numStruct,
         num_parc: numParc,
         genre,
+        sort,
+        order,
         page,
         page_size: pageSize,
       }),
@@ -145,6 +151,7 @@ export default function DemandesInterventionPage() {
   )
 
   const resetFilters = () => {
+    resetSort()
     setSearchInput('')
     setSearch('')
     setStatut(undefined)
@@ -264,7 +271,8 @@ export default function DemandesInterventionPage() {
           rowKey="id"
           size="middle"
           loading={isFetching}
-          columns={columns}
+          onChange={onTableChange}
+          columns={sortable(columns, ['reference', 'date_demande', 'num_plaque', 'structure', 'parc', 'genre', 'demandeur', 'date_rdv', 'statut'])}
           dataSource={data?.results ?? []}
           locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1250 }}

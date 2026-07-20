@@ -11,6 +11,7 @@ import { STATUT_META, STATUT_OPTIONS } from '../utils/statut'
 import TaxeStatsCards from '../components/TaxeStatsCards'
 import ExportButton from '../components/ExportButton'
 import { tableErrorLocale } from '../utils/tableLocale'
+import { useTableSort } from '../utils/useTableSort'
 
 const { Title } = Typography
 
@@ -30,6 +31,9 @@ export default function TaxesCirculationPage() {
   const [structSearch, setStructSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const { sort, order, onTableChange, sortable, reset: resetSort } = useTableSort(
+    () => setPage(1),
+  )
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -52,13 +56,15 @@ export default function TaxesCirculationPage() {
   })
 
   const { data, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['taxes', { search, nature, statut, numStruct, page, pageSize }],
+    queryKey: ['taxes', { search, nature, statut, numStruct, sort, order, page, pageSize }],
     queryFn: () =>
       fetchTaxes({
         search: search || undefined,
         nature,
         statut,
         num_struct: numStruct,
+        sort,
+        order,
         page,
         page_size: pageSize,
       }),
@@ -129,6 +135,7 @@ export default function TaxesCirculationPage() {
   )
 
   const resetFilters = () => {
+    resetSort()
     setSearchInput('')
     setSearch('')
     setNature(undefined)
@@ -209,7 +216,8 @@ export default function TaxesCirculationPage() {
           rowKey="id"
           size="middle"
           loading={isFetching}
-          columns={columns}
+          onChange={onTableChange}
+          columns={sortable(columns, ['num_plaque', 'nature', 'structure', 'date_debut', 'date_fin', 'montant', 'statut'])}
           dataSource={data?.results ?? []}
           locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1000 }}

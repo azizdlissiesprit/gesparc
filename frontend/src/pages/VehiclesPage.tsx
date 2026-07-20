@@ -20,6 +20,7 @@ import VehicleStatsCards from '../components/VehicleStatsCards'
 import VehicleDetailDrawer from '../components/VehicleDetailDrawer'
 import ExportButton from '../components/ExportButton'
 import { tableErrorLocale } from '../utils/tableLocale'
+import { useTableSort } from '../utils/useTableSort'
 
 const { Title } = Typography
 
@@ -34,6 +35,9 @@ export default function VehiclesPage() {
   const [categorie, setCategorie] = useState<string | undefined>()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const { sort, order, onTableChange, sortable, reset: resetSort } = useTableSort(
+    () => setPage(1),
+  )
   const [selected, setSelected] = useState<string | null>(null)
 
   // Debounce the free-text search.
@@ -59,13 +63,15 @@ export default function VehiclesPage() {
   })
 
   const { data, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['vehicles', { search, etat, numStruct, categorie, page, pageSize }],
+    queryKey: ['vehicles', { search, etat, numStruct, categorie, sort, order, page, pageSize }],
     queryFn: () =>
       fetchVehicles({
         search: search || undefined,
         etat,
         num_struct: numStruct,
         categorie,
+        sort,
+        order,
         page,
         page_size: pageSize,
       }),
@@ -146,6 +152,7 @@ export default function VehiclesPage() {
   )
 
   const resetFilters = () => {
+    resetSort()
     setSearchInput('')
     setSearch('')
     setEtat(undefined)
@@ -226,7 +233,8 @@ export default function VehiclesPage() {
           rowKey="num_veh"
           size="middle"
           loading={isFetching}
-          columns={columns}
+          onChange={onTableChange}
+          columns={sortable(columns, ['num_plaque', 'marque', 'type', 'genre', 'energie', 'structure', 'beneficiaire', 'etat', 'index_km', 'age_veh', 'categorie'])}
           dataSource={data?.results ?? []}
           locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 900 }}

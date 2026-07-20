@@ -11,6 +11,7 @@ import BonCommandeStatsCards from '../components/BonCommandeStatsCards'
 import BonCommandeDetailDrawer from '../components/BonCommandeDetailDrawer'
 import ExportButton from '../components/ExportButton'
 import { tableErrorLocale } from '../utils/tableLocale'
+import { useTableSort } from '../utils/useTableSort'
 
 const { Title } = Typography
 
@@ -34,6 +35,9 @@ export default function BonsCommandePage() {
   const [articleSearch, setArticleSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const { sort, order, onTableChange, sortable, reset: resetSort } = useTableSort(
+    () => setPage(1),
+  )
   const [selected, setSelected] = useState<string | null>(null)
 
   useEffect(() => {
@@ -65,7 +69,7 @@ export default function BonsCommandePage() {
   })
 
   const { data, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['bons-commande', { search, statut, numFourn, numParc, article, page, pageSize }],
+    queryKey: ['bons-commande', { search, statut, numFourn, numParc, article, sort, order, page, pageSize }],
     queryFn: () =>
       fetchBonsCommande({
         search: search || undefined,
@@ -73,6 +77,8 @@ export default function BonsCommandePage() {
         num_fourn: numFourn,
         num_parc: numParc,
         article,
+        sort,
+        order,
         page,
         page_size: pageSize,
       }),
@@ -151,6 +157,7 @@ export default function BonsCommandePage() {
   )
 
   const resetFilters = () => {
+    resetSort()
     setSearchInput('')
     setSearch('')
     setStatut(undefined)
@@ -251,7 +258,8 @@ export default function BonsCommandePage() {
           rowKey="reference"
           size="middle"
           loading={isFetching}
-          columns={columns}
+          onChange={onTableChange}
+          columns={sortable(columns, ['reference', 'date_creation', 'fournisseur', 'parc', 'nb_articles', 'montant', 'statut'])}
           dataSource={data?.results ?? []}
           locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1150 }}

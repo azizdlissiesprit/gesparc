@@ -22,6 +22,7 @@ import type { LookupItem, Reception } from '../types'
 import BreakdownGrid from '../components/BreakdownGrid'
 import ExportButton from '../components/ExportButton'
 import { tableErrorLocale } from '../utils/tableLocale'
+import { useTableSort } from '../utils/useTableSort'
 
 const { Title } = Typography
 
@@ -47,6 +48,9 @@ export default function ReceptionsPage() {
   const [articleSearch, setArticleSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const { sort, order, onTableChange, sortable, reset: resetSort } = useTableSort(
+    () => setPage(1),
+  )
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -84,7 +88,7 @@ export default function ReceptionsPage() {
   })
 
   const { data, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['receptions', { search, statut, numFourn, numParc, article, page, pageSize }],
+    queryKey: ['receptions', { search, statut, numFourn, numParc, article, sort, order, page, pageSize }],
     queryFn: () =>
       fetchReceptions({
         search: search || undefined,
@@ -92,6 +96,8 @@ export default function ReceptionsPage() {
         num_fourn: numFourn,
         num_parc: numParc,
         article,
+        sort,
+        order,
         page,
         page_size: pageSize,
       }),
@@ -153,6 +159,7 @@ export default function ReceptionsPage() {
   )
 
   const resetFilters = () => {
+    resetSort()
     setSearchInput('')
     setSearch('')
     setStatut(undefined)
@@ -260,7 +267,8 @@ export default function ReceptionsPage() {
           rowKey="num_piece"
           size="middle"
           loading={isFetching}
-          columns={columns}
+          onChange={onTableChange}
+          columns={sortable(columns, ['num_piece', 'date_piece', 'fournisseur', 'ref_bc', 'parc', 'statut', 'nb_articles', 'montant'])}
           dataSource={data?.results ?? []}
           locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1150 }}

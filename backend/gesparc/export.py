@@ -343,7 +343,12 @@ class _Echo:
 
 def _kwargs_from(request, spec: Export) -> dict[str, Any]:
     """Build the list_* kwargs from the request, per the registry declaration."""
-    kwargs: dict[str, Any] = {}
+    kwargs: dict[str, Any] = {
+        # Every list_* takes these; the sort key is validated against that
+        # resource's allowlist in queries._order, so it is safe to pass through.
+        "sort": request.query_params.get("sort") or None,
+        "order": request.query_params.get("order") or None,
+    }
     for name in spec.str_params:
         kwargs[name] = request.query_params.get(name) or None
     for name in spec.int_params:

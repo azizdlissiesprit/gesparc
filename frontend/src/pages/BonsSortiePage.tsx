@@ -22,6 +22,7 @@ import type { BonSortie, LookupItem } from '../types'
 import BreakdownGrid from '../components/BreakdownGrid'
 import ExportButton from '../components/ExportButton'
 import { tableErrorLocale } from '../utils/tableLocale'
+import { useTableSort } from '../utils/useTableSort'
 
 const { Title } = Typography
 
@@ -51,6 +52,9 @@ export default function BonsSortiePage() {
   const [articleSearch, setArticleSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const { sort, order, onTableChange, sortable, reset: resetSort } = useTableSort(
+    () => setPage(1),
+  )
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -87,7 +91,7 @@ export default function BonsSortiePage() {
   })
 
   const { data, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['bons-sortie', { search, mode, statut, numMag, numParc, article, page, pageSize }],
+    queryKey: ['bons-sortie', { search, mode, statut, numMag, numParc, article, sort, order, page, pageSize }],
     queryFn: () =>
       fetchBonsSortie({
         search: search || undefined,
@@ -96,6 +100,8 @@ export default function BonsSortiePage() {
         num_mag: numMag,
         num_parc: numParc,
         article,
+        sort,
+        order,
         page,
         page_size: pageSize,
       }),
@@ -158,6 +164,7 @@ export default function BonsSortiePage() {
   )
 
   const resetFilters = () => {
+    resetSort()
     setSearchInput('')
     setSearch('')
     setMode(undefined)
@@ -276,7 +283,8 @@ export default function BonsSortiePage() {
           rowKey="num_piece"
           size="middle"
           loading={isFetching}
-          columns={columns}
+          onChange={onTableChange}
+          columns={sortable(columns, ['num_piece', 'date_piece', 'num_bt_int', 'mode', 'magasin', 'parc', 'num_veh', 'statut', 'nb_articles', 'montant'])}
           dataSource={data?.results ?? []}
           locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1250 }}
