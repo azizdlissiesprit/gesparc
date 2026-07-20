@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Card, Col, Row, Skeleton, Empty, Typography } from 'antd'
+import { Col, Row, Typography } from 'antd'
 import {
   CarOutlined,
   CheckCircleOutlined,
@@ -13,24 +13,23 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  ComposedChart,
   Label,
   Legend,
   Line,
+  LineChart,
   Pie,
   PieChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
-import type { ReactNode } from 'react'
 import { fetchOverview } from '../api/overview'
 import ChartTooltip from '../charts/ChartTooltip'
+import ChartCard from '../components/ChartCard'
+import type { TableView } from '../components/ChartCard'
+import StatsRow from '../components/StatTile'
 import {
   CHART,
-  ETAT_CHART_COLORS,
-  NATURE_CHART_COLORS,
   cleanLabel,
   fmtInt,
   fmtMoneyShort,
@@ -39,12 +38,15 @@ import {
 const { Title, Text } = Typography
 
 const axisTick = { fill: CHART.muted, fontSize: 12 }
+// Validated 3-slot categorical set (see dataviz validator: all checks pass).
 const COMPOSITION_COLORS = [CHART.blue, CHART.aqua, CHART.yellow]
+// Magnitude is one hue: every single-series bar uses the sequential default.
+const BAR = CHART.blue
 
 // Shorten the long official structure names for chart axes.
 const shortStruct = (s: string | null | undefined) => {
   const short = cleanLabel(s)
-    .replace(/^[ًٌٍَُِّْ]+/, '') // strip stray Arabic diacritics prefix
+    .replace(/^[ًٌٍَُِّْ]+/, '')
     .replace(/^Direction Régionale de\s+/i, 'DR ')
     .replace(/^Direction Régionale d['’]/i, 'DR ')
     .replace(/^Direction Centrale\s+/i, 'DC ')
@@ -54,95 +56,17 @@ const shortStruct = (s: string | null | undefined) => {
   return short.length > 20 ? `${short.slice(0, 19)}…` : short
 }
 
-function KpiCard({
-  icon,
-  accent,
-  title,
-  value,
-  subtitle,
-  loading,
-}: {
-  icon: ReactNode
-  accent: string
-  title: string
-  value: string
-  subtitle: string
-  loading: boolean
-}) {
-  return (
-    <Card styles={{ body: { padding: 18 } }}>
-      {loading ? (
-        <Skeleton active paragraph={false} />
-      ) : (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div
-            style={{
-              width: 46,
-              height: 46,
-              borderRadius: 12,
-              flexShrink: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: `${accent}1a`,
-              color: accent,
-              fontSize: 22,
-            }}
-          >
-            {icon}
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ color: CHART.muted, fontSize: 13 }}>{title}</div>
-            <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.2, color: CHART.ink }}>
-              {value}
-            </div>
-            <div style={{ color: CHART.inkSecondary, fontSize: 12 }}>{subtitle}</div>
-          </div>
-        </div>
-      )}
-    </Card>
-  )
-}
-
-function ChartCard({
-  title,
-  subtitle,
-  loading,
-  empty,
-  height = 300,
-  children,
-}: {
-  title: string
-  subtitle?: string
-  loading: boolean
-  empty?: boolean
-  height?: number
-  children: ReactNode
-}) {
-  return (
-    <Card
-      title={
-        <div style={{ lineHeight: 1.3, padding: '4px 0' }}>
-          <div style={{ fontWeight: 600 }}>{title}</div>
-          {subtitle && (
-            <div style={{ fontSize: 12, fontWeight: 400, color: CHART.muted }}>{subtitle}</div>
-          )}
-        </div>
-      }
-      styles={{ body: { padding: 16, height } }}
-    >
-      {loading ? (
-        <Skeleton active />
-      ) : empty ? (
-        <Empty />
-      ) : (
-        <ResponsiveContainer width="100%" height="100%">
-          {children as React.ReactElement}
-        </ResponsiveContainer>
-      )}
-    </Card>
-  )
-}
+/** Build the accessible table twin for a simple label/value chart. */
+const tableOf = (
+  dimension: string,
+  measure: string,
+  rows: { name: string; n: number }[],
+  fmt: (n: number) => string = fmtInt,
+): TableView => ({
+  dimension,
+  measure,
+  rows: rows.map((r, i) => ({ key: `${r.name}-${i}`, label: r.name, value: fmt(r.n) })),
+})
 
 export default function DashboardPage() {
   const { data, isLoading } = useQuery({
@@ -152,8 +76,8 @@ export default function DashboardPage() {
   })
 
   const k = data?.kpis
-  const etat = (data?.parc_par_etat ?? []).map((e) => ({ ...e, name: e.etat }))
-  const nature = (data?.bt_par_nature ?? []).map((n) => ({ ...n, name: n.nature }))
+  const etat = (data?.parc_par_etat ?? []).map((e) => ({ name: e.etat, n: e.n }))
+  const nature = (data?.bt_par_nature ?? []).map((n) => ({ name: n.nature, n: n.n }))
   const genre = (data?.parc_par_genre ?? []).map((g) => ({ name: cleanLabel(g.genre), n: g.n }))
   const energie = (data?.parc_par_energie ?? []).map((e) => ({
     name: cleanLabel(e.energie),
@@ -177,130 +101,144 @@ export default function DashboardPage() {
     {
       icon: <CarOutlined />,
       accent: '#2a78d6',
-      title: 'Parc total',
+      label: 'Parc total',
       value: fmtInt(k?.vehicules_total),
-      subtitle: 'véhicules immatriculés',
+      hint: 'véhicules immatriculés',
     },
     {
       icon: <CheckCircleOutlined />,
       accent: '#008300',
-      title: 'En circulation',
+      label: 'En circulation',
       value: fmtInt(k?.en_circulation),
-      subtitle: `${k?.disponibilite ?? 0}% du parc`,
+      hint: `${k?.disponibilite ?? 0} % du parc`,
     },
     {
       icon: <FieldTimeOutlined />,
       accent: '#4a3aa7',
-      title: 'Âge moyen du parc',
+      label: 'Âge moyen du parc',
       value: k?.age_moyen != null ? `${k.age_moyen} ans` : '—',
-      subtitle: 'signal de renouvellement',
+      hint: 'signal de renouvellement',
     },
     {
       icon: <WalletOutlined />,
       accent: '#096dd9',
-      title: 'Coût de maintenance',
+      label: 'Coût de maintenance',
       value: `${fmtMoneyShort(k?.cout_maintenance_total)} TND`,
-      subtitle: 'cumulé, tous bons de travail',
+      hint: 'cumulé, tous bons de travail',
     },
     {
       icon: <DollarOutlined />,
       accent: '#d46b08',
-      title: 'Coût moyen / véhicule',
+      label: 'Coût moyen / véhicule',
       value: `${fmtInt(k?.cout_moyen_vehicule)} TND`,
-      subtitle: 'maintenance par véhicule',
+      hint: 'maintenance par véhicule',
     },
     {
       icon: <ToolOutlined />,
       accent: '#1baf7a',
-      title: 'Bons de travail',
+      label: 'Bons de travail',
       value: fmtInt(k?.bons_travail_total),
-      subtitle: 'interventions enregistrées',
+      hint: 'interventions enregistrées',
     },
   ]
 
   return (
     <div>
-      <Title level={3} style={{ marginTop: 0, marginBottom: 4 }}>
+      <Title level={3} style={{ marginTop: 0, marginBottom: 2 }}>
         Tableau de bord
       </Title>
       <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
         Vue d'ensemble du parc, de la maintenance et des coûts — Tunisie Telecom
       </Text>
 
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        {kpis.map((c) => (
-          <Col xs={12} sm={12} md={8} lg={4} key={c.title}>
-            <KpiCard {...c} loading={isLoading} />
-          </Col>
-        ))}
-      </Row>
+      <StatsRow items={kpis} loading={isLoading} />
 
-      {/* Maintenance cost trend + cost structure */}
+      {/* Two measures, two charts — never two y-scales on one plot. */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={24} lg={15}>
+        <Col xs={24} lg={12}>
           <ChartCard
             title="Coût de maintenance par année"
-            subtitle="Dépense de réparation et volume d'interventions (années complètes)"
+            subtitle="Dépense de réparation en TND — années complètes"
             loading={isLoading}
             empty={!cout.length}
+            table={tableOf(
+              'Année',
+              'Coût (TND)',
+              cout.map((c) => ({ name: c.annee, n: c.cout })),
+            )}
           >
-            <ComposedChart data={cout} margin={{ left: 8, right: 12, top: 8, bottom: 4 }}>
+            <BarChart data={cout} margin={{ left: 8, right: 12, top: 8, bottom: 4 }}>
               <CartesianGrid vertical={false} stroke={CHART.grid} />
               <XAxis dataKey="annee" tick={axisTick} tickLine={false} axisLine={false} />
               <YAxis
-                yAxisId="cout"
                 tick={axisTick}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(v) => fmtMoneyShort(v)}
-                width={48}
-              />
-              <YAxis
-                yAxisId="nb"
-                orientation="right"
-                tick={axisTick}
-                tickLine={false}
-                axisLine={false}
-                width={40}
+                width={52}
               />
               <Tooltip
                 cursor={{ fill: 'rgba(42,120,214,0.06)' }}
-                content={<ChartTooltip valueFmt={(v) => fmtInt(v)} />}
-              />
-              <Legend
-                iconType="circle"
-                formatter={(v) => <span style={{ color: CHART.inkSecondary }}>{v}</span>}
+                content={<ChartTooltip valueFmt={(v) => `${fmtInt(v)} TND`} />}
               />
               <Bar
-                yAxisId="cout"
                 isAnimationActive={false}
                 dataKey="cout"
-                name="Coût (TND)"
-                fill={CHART.blue}
+                name="Coût"
+                fill={BAR}
                 radius={[4, 4, 0, 0]}
-                maxBarSize={44}
+                maxBarSize={24}
               />
+            </BarChart>
+          </ChartCard>
+        </Col>
+
+        <Col xs={24} lg={12}>
+          <ChartCard
+            title="Interventions par année"
+            subtitle="Nombre de bons de travail ouverts"
+            loading={isLoading}
+            empty={!cout.length}
+            table={tableOf(
+              'Année',
+              'Interventions',
+              cout.map((c) => ({ name: c.annee, n: c.nombre })),
+            )}
+          >
+            <LineChart data={cout} margin={{ left: 8, right: 16, top: 8, bottom: 4 }}>
+              <CartesianGrid vertical={false} stroke={CHART.grid} />
+              <XAxis dataKey="annee" tick={axisTick} tickLine={false} axisLine={false} />
+              <YAxis tick={axisTick} tickLine={false} axisLine={false} width={48} />
+              <Tooltip content={<ChartTooltip valueFmt={fmtInt} />} />
               <Line
-                yAxisId="nb"
                 isAnimationActive={false}
                 type="monotone"
                 dataKey="nombre"
                 name="Interventions"
-                stroke={CHART.yellow}
+                stroke={BAR}
                 strokeWidth={2}
-                dot={{ r: 3, fill: CHART.yellow, strokeWidth: 0 }}
-                activeDot={{ r: 5 }}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                dot={{ r: 4, fill: BAR, stroke: CHART.surface, strokeWidth: 2 }}
+                activeDot={{ r: 6, stroke: CHART.surface, strokeWidth: 2 }}
               />
-            </ComposedChart>
+            </LineChart>
           </ChartCard>
         </Col>
+      </Row>
 
-        <Col xs={24} lg={9}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col xs={24} lg={8}>
           <ChartCard
             title="Répartition du coût de maintenance"
-            subtitle="Pièces · main d'œuvre · réparation externe"
+            subtitle="Où va la dépense — part de chaque poste"
             loading={isLoading}
             empty={!composition.length}
+            table={tableOf(
+              'Poste',
+              'Coût (TND)',
+              composition.map((c) => ({ name: c.name, n: c.value })),
+            )}
           >
             <PieChart>
               <Pie
@@ -308,8 +246,8 @@ export default function DashboardPage() {
                 data={composition}
                 dataKey="value"
                 nameKey="name"
-                innerRadius={62}
-                outerRadius={100}
+                innerRadius={58}
+                outerRadius={92}
                 paddingAngle={2}
                 stroke={CHART.surface}
                 strokeWidth={2}
@@ -329,7 +267,7 @@ export default function DashboardPage() {
                       dominantBaseline="central"
                       style={{ fill: CHART.ink }}
                     >
-                      <tspan x="50%" dy="-0.4em" style={{ fontSize: 20, fontWeight: 700 }}>
+                      <tspan x="50%" dy="-0.4em" style={{ fontSize: 19, fontWeight: 650 }}>
                         {fmtMoneyShort(k?.cout_maintenance_total)}
                       </tspan>
                       <tspan x="50%" dy="1.6em" style={{ fontSize: 12, fill: CHART.muted }}>
@@ -347,74 +285,88 @@ export default function DashboardPage() {
             </PieChart>
           </ChartCard>
         </Col>
-      </Row>
 
-      {/* Fleet composition */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} lg={8}>
           <ChartCard
             title="Parc par état"
             subtitle="Répartition opérationnelle du parc"
             loading={isLoading}
             empty={!etat.length}
+            table={tableOf('État', 'Véhicules', etat)}
           >
-            <PieChart>
-              <Pie
-                isAnimationActive={false}
-                data={etat}
-                dataKey="n"
-                nameKey="name"
-                innerRadius={58}
-                outerRadius={96}
-                paddingAngle={2}
-                stroke={CHART.surface}
-                strokeWidth={2}
-                label={(p: { percent?: number }) => `${Math.round((p.percent ?? 0) * 100)}%`}
-                labelLine={false}
-              >
-                {etat.map((e) => (
-                  <Cell key={e.etat_code} fill={ETAT_CHART_COLORS[e.etat_code]} />
-                ))}
-                <Label
-                  position="center"
-                  content={() => (
-                    <text
-                      x="50%"
-                      y="50%"
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                      style={{ fill: CHART.ink }}
-                    >
-                      <tspan x="50%" dy="-0.4em" style={{ fontSize: 20, fontWeight: 700 }}>
-                        {fmtInt(k?.vehicules_total)}
-                      </tspan>
-                      <tspan x="50%" dy="1.6em" style={{ fontSize: 12, fill: CHART.muted }}>
-                        véhicules
-                      </tspan>
-                    </text>
-                  )}
-                />
-              </Pie>
-              <Tooltip content={<ChartTooltip valueFmt={fmtInt} />} />
-              <Legend
-                iconType="circle"
-                formatter={(v) => <span style={{ color: CHART.inkSecondary }}>{v}</span>}
+            <BarChart
+              data={etat}
+              layout="vertical"
+              margin={{ left: 8, right: 20, top: 4, bottom: 4 }}
+            >
+              <CartesianGrid horizontal={false} stroke={CHART.grid} />
+              <XAxis type="number" tick={axisTick} tickLine={false} axisLine={false} />
+              <YAxis
+                type="category"
+                dataKey="name"
+                tick={axisTick}
+                tickLine={false}
+                axisLine={false}
+                width={96}
               />
-            </PieChart>
+              <Tooltip
+                cursor={{ fill: 'rgba(42,120,214,0.06)' }}
+                content={<ChartTooltip valueFmt={fmtInt} />}
+              />
+              <Bar
+                isAnimationActive={false}
+                dataKey="n"
+                name="Véhicules"
+                fill={BAR}
+                radius={[0, 4, 4, 0]}
+                maxBarSize={20}
+              />
+            </BarChart>
           </ChartCard>
         </Col>
 
+        <Col xs={24} lg={8}>
+          <ChartCard
+            title="Parc par énergie"
+            subtitle="Motorisation du parc"
+            loading={isLoading}
+            empty={!energie.length}
+            table={tableOf('Énergie', 'Véhicules', energie)}
+          >
+            <BarChart data={energie} margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
+              <CartesianGrid vertical={false} stroke={CHART.grid} />
+              <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={false} />
+              <YAxis tick={axisTick} tickLine={false} axisLine={false} width={48} />
+              <Tooltip
+                cursor={{ fill: 'rgba(42,120,214,0.06)' }}
+                content={<ChartTooltip valueFmt={fmtInt} />}
+              />
+              <Bar
+                isAnimationActive={false}
+                dataKey="n"
+                name="Véhicules"
+                fill={BAR}
+                radius={[4, 4, 0, 0]}
+                maxBarSize={24}
+              />
+            </BarChart>
+          </ChartCard>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]}>
         <Col xs={24} lg={8}>
           <ChartCard
             title="Parc par genre"
             subtitle="Types de véhicules les plus fréquents"
             loading={isLoading}
             empty={!genre.length}
+            table={tableOf('Genre', 'Véhicules', genre)}
           >
             <BarChart
               data={genre}
               layout="vertical"
-              margin={{ left: 16, right: 16, top: 4, bottom: 4 }}
+              margin={{ left: 8, right: 20, top: 4, bottom: 4 }}
             >
               <CartesianGrid horizontal={false} stroke={CHART.grid} />
               <XAxis type="number" tick={axisTick} tickLine={false} axisLine={false} />
@@ -434,9 +386,9 @@ export default function DashboardPage() {
                 isAnimationActive={false}
                 dataKey="n"
                 name="Véhicules"
-                fill={CHART.blue}
+                fill={BAR}
                 radius={[0, 4, 4, 0]}
-                maxBarSize={22}
+                maxBarSize={20}
               />
             </BarChart>
           </ChartCard>
@@ -444,45 +396,16 @@ export default function DashboardPage() {
 
         <Col xs={24} lg={8}>
           <ChartCard
-            title="Parc par énergie"
-            subtitle="Motorisation du parc"
-            loading={isLoading}
-            empty={!energie.length}
-          >
-            <BarChart data={energie} margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
-              <CartesianGrid vertical={false} stroke={CHART.grid} />
-              <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={false} />
-              <YAxis tick={axisTick} tickLine={false} axisLine={false} width={44} />
-              <Tooltip
-                cursor={{ fill: 'rgba(42,120,214,0.06)' }}
-                content={<ChartTooltip valueFmt={fmtInt} />}
-              />
-              <Bar
-                isAnimationActive={false}
-                dataKey="n"
-                name="Véhicules"
-                fill={CHART.aqua}
-                radius={[4, 4, 0, 0]}
-                maxBarSize={56}
-              />
-            </BarChart>
-          </ChartCard>
-        </Col>
-      </Row>
-
-      {/* Distribution + maintenance mix */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={15}>
-          <ChartCard
             title="Top structures par taille de parc"
             subtitle="Structures détenant le plus de véhicules"
             loading={isLoading}
             empty={!structures.length}
+            table={tableOf('Structure', 'Véhicules', structures)}
           >
             <BarChart
               data={structures}
               layout="vertical"
-              margin={{ left: 16, right: 24, top: 4, bottom: 4 }}
+              margin={{ left: 8, right: 20, top: 4, bottom: 4 }}
             >
               <CartesianGrid horizontal={false} stroke={CHART.grid} />
               <XAxis type="number" tick={axisTick} tickLine={false} axisLine={false} />
@@ -492,7 +415,7 @@ export default function DashboardPage() {
                 tick={axisTick}
                 tickLine={false}
                 axisLine={false}
-                width={132}
+                width={124}
               />
               <Tooltip
                 cursor={{ fill: 'rgba(42,120,214,0.06)' }}
@@ -502,45 +425,50 @@ export default function DashboardPage() {
                 isAnimationActive={false}
                 dataKey="n"
                 name="Véhicules"
-                fill={CHART.blue}
+                fill={BAR}
                 radius={[0, 4, 4, 0]}
-                maxBarSize={22}
+                maxBarSize={20}
               />
             </BarChart>
           </ChartCard>
         </Col>
 
-        <Col xs={24} lg={9}>
+        <Col xs={24} lg={8}>
           <ChartCard
             title="Bons de travail par nature"
-            subtitle="Réparation · entretien · remorquage"
+            subtitle="Répartition des interventions"
             loading={isLoading}
             empty={!nature.length}
+            table={tableOf('Nature', 'Bons de travail', nature)}
           >
-            <PieChart>
-              <Pie
-                isAnimationActive={false}
-                data={nature}
-                dataKey="n"
-                nameKey="name"
-                innerRadius={62}
-                outerRadius={100}
-                paddingAngle={2}
-                stroke={CHART.surface}
-                strokeWidth={2}
-                label={(p: { percent?: number }) => `${Math.round((p.percent ?? 0) * 100)}%`}
-                labelLine={false}
-              >
-                {nature.map((n) => (
-                  <Cell key={n.nature_code} fill={NATURE_CHART_COLORS[n.nature_code]} />
-                ))}
-              </Pie>
-              <Tooltip content={<ChartTooltip valueFmt={fmtInt} />} />
-              <Legend
-                iconType="circle"
-                formatter={(v) => <span style={{ color: CHART.inkSecondary }}>{v}</span>}
+            <BarChart
+              data={nature}
+              layout="vertical"
+              margin={{ left: 8, right: 20, top: 4, bottom: 4 }}
+            >
+              <CartesianGrid horizontal={false} stroke={CHART.grid} />
+              <XAxis type="number" tick={axisTick} tickLine={false} axisLine={false} />
+              <YAxis
+                type="category"
+                dataKey="name"
+                tick={axisTick}
+                tickLine={false}
+                axisLine={false}
+                width={96}
               />
-            </PieChart>
+              <Tooltip
+                cursor={{ fill: 'rgba(42,120,214,0.06)' }}
+                content={<ChartTooltip valueFmt={fmtInt} />}
+              />
+              <Bar
+                isAnimationActive={false}
+                dataKey="n"
+                name="Bons de travail"
+                fill={BAR}
+                radius={[0, 4, 4, 0]}
+                maxBarSize={20}
+              />
+            </BarChart>
           </ChartCard>
         </Col>
       </Row>

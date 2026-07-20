@@ -97,14 +97,15 @@ export default function App() {
       >
         <div
           style={{
-            height: 56,
+            height: 60,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
             fontWeight: 700,
-            color: '#1677ff',
+            color: '#2a78d6',
             fontSize: collapsed ? 14 : 18,
+            letterSpacing: '-0.01em',
           }}
         >
           <CarOutlined />
@@ -116,6 +117,7 @@ export default function App() {
           defaultOpenKeys={['administratif', 'maintenance']}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
+          style={{ borderInlineEnd: 'none' }}
         />
       </Sider>
       <Layout>
@@ -126,13 +128,16 @@ export default function App() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderBottom: '1px solid #f0f0f0',
+            borderBottom: '1px solid #ececea',
+            position: 'sticky',
+            top: 0,
+            zIndex: 10,
           }}
         >
-          <Title level={4} style={{ margin: 0 }}>
-            Gestion de Parc — Tableau de bord
+          <Title level={4} style={{ margin: 0, letterSpacing: '-0.01em' }}>
+            Gestion de Parc
           </Title>
-          <span style={{ color: '#8c8c8c' }}>Tunisie Telecom</span>
+          <span style={{ color: '#898781' }}>Tunisie Telecom</span>
         </Header>
         <Content style={{ margin: 0, padding: 24 }}>
           <Routes>

@@ -1,10 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
-import { Card, Col, Row, Statistic, Skeleton } from 'antd'
-import { CarOutlined } from '@ant-design/icons'
+import {
+  CarOutlined,
+  CheckCircleOutlined,
+  DollarOutlined,
+  StopOutlined,
+  ToolOutlined,
+} from '@ant-design/icons'
 import { fetchVehicleStats } from '../api/vehicles'
-import { ETAT_META } from '../utils/etat'
-
-const HIGHLIGHT_ETATS = [1, 2, 5, 6] // circulation, réparation, réformé, vendu
+import StatsRow, { ACCENT } from './StatTile'
+import { fmtInt } from '../charts/theme'
 
 export default function VehicleStatsCards() {
   const { data, isLoading } = useQuery({
@@ -14,42 +18,19 @@ export default function VehicleStatsCards() {
 
   const countFor = (code: number) =>
     data?.by_etat.find((e) => e.etat_code === code)?.n ?? 0
+  const total = data?.total ?? 0
+  const pct = (n: number) => (total ? `${Math.round((n / total) * 100)} % du parc` : '—')
 
   return (
-    <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-      <Col xs={24} sm={12} md={8} lg={4} xl={4}>
-        <Card>
-          {isLoading ? (
-            <Skeleton active paragraph={false} />
-          ) : (
-            <Statistic
-              title="Total véhicules"
-              value={data?.total ?? 0}
-              prefix={<CarOutlined />}
-            />
-          )}
-        </Card>
-      </Col>
-      {HIGHLIGHT_ETATS.map((code) => (
-        <Col xs={24} sm={12} md={8} lg={5} xl={5} key={code}>
-          <Card>
-            {isLoading ? (
-              <Skeleton active paragraph={false} />
-            ) : (
-              <Statistic
-                title={ETAT_META[code].label}
-                value={countFor(code)}
-                valueStyle={{
-                  color:
-                    ETAT_META[code].color === 'default'
-                      ? undefined
-                      : ETAT_META[code].color,
-                }}
-              />
-            )}
-          </Card>
-        </Col>
-      ))}
-    </Row>
+    <StatsRow
+      loading={isLoading}
+      items={[
+        { label: 'Total véhicules', value: fmtInt(total), icon: <CarOutlined />, accent: ACCENT.neutral, hint: 'parc immatriculé' },
+        { label: 'En circulation', value: fmtInt(countFor(1)), icon: <CheckCircleOutlined />, accent: ACCENT.good, hint: pct(countFor(1)) },
+        { label: 'En réparation', value: fmtInt(countFor(2)), icon: <ToolOutlined />, accent: ACCENT.warn, hint: 'immobilisés en atelier' },
+        { label: 'Réformés', value: fmtInt(countFor(5)), icon: <StopOutlined />, accent: ACCENT.violet, hint: 'retirés du service' },
+        { label: 'Vendus', value: fmtInt(countFor(6)), icon: <DollarOutlined />, accent: ACCENT.info, hint: pct(countFor(6)) },
+      ]}
+    />
   )
 }

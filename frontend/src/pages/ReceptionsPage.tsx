@@ -1,21 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import {
-  Button,
-  Card,
-  Col,
-  Input,
-  Row,
-  Select,
-  Skeleton,
-  Space,
-  Statistic,
-  Table,
-  Tag,
-  Typography,
-} from 'antd'
+import { Button, Card, Input, Select, Space, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import {
+  InboxOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  ShopOutlined,
+  TagsOutlined,
+  UnorderedListOutlined,
+} from '@ant-design/icons'
+import StatsRow, { ACCENT } from '../components/StatTile'
 import dayjs from 'dayjs'
 import {
   fetchReceptions,
@@ -166,10 +161,10 @@ export default function ReceptionsPage() {
   }
 
   const cards = [
-    { title: 'Réceptions', value: int(stats?.total) },
-    { title: 'Lignes', value: int(stats?.nb_lignes) },
-    { title: 'Articles', value: int(stats?.nb_articles) },
-    { title: 'Fournisseurs', value: int(stats?.nb_fournisseurs) },
+    { label: 'Réceptions', value: int(stats?.total), icon: <InboxOutlined />, accent: ACCENT.neutral, hint: 'entrées en stock' },
+    { label: 'Lignes', value: int(stats?.nb_lignes), icon: <UnorderedListOutlined />, accent: ACCENT.info, hint: "lignes d'article" },
+    { label: 'Articles', value: int(stats?.nb_articles), icon: <TagsOutlined />, accent: ACCENT.violet, hint: 'références reçues' },
+    { label: 'Fournisseurs', value: int(stats?.nb_fournisseurs), icon: <ShopOutlined />, accent: ACCENT.good, hint: 'fournisseurs livrant' },
   ]
 
   return (
@@ -178,19 +173,7 @@ export default function ReceptionsPage() {
         Réceptions de fournisseur
       </Title>
 
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        {cards.map((c) => (
-          <Col xs={12} md={6} key={c.title}>
-            <Card>
-              {statsLoading ? (
-                <Skeleton active paragraph={false} />
-              ) : (
-                <Statistic title={c.title} value={c.value} />
-              )}
-            </Card>
-          </Col>
-        ))}
-      </Row>
+      <StatsRow items={cards} loading={statsLoading} />
 
       <Card style={{ marginBottom: 16 }} styles={{ body: { padding: 16 } }}>
         <Space wrap size="middle">

@@ -35,7 +35,9 @@ export const NATURE_CHART_COLORS: Record<string, string> = {
 // ---- number formatting -----------------------------------------------------
 const nf = new Intl.NumberFormat('fr-FR')
 
-export const fmtInt = (n: number | null | undefined) => nf.format(Number(n ?? 0))
+/** Whole-number display (counts and rounded money) — never shows raw decimals. */
+export const fmtInt = (n: number | null | undefined) =>
+  nf.format(Math.round(Number(n ?? 0)))
 
 /** Compact money in TND: 11.3 M, 942 k, 320. */
 export function fmtMoneyShort(n: number | null | undefined): string {

@@ -21,10 +21,31 @@ createRoot(document.getElementById('root')!).render(
         locale={frFR}
         theme={{
           token: {
-            colorPrimary: '#1677ff',
-            borderRadius: 8,
+            // One blue for UI and charts, so the whole app reads as one system.
+            colorPrimary: '#2a78d6',
+            colorInfo: '#2a78d6',
+            colorTextBase: '#0b0b0b',
+            colorBgLayout: '#f5f6f8',
+            borderRadius: 10,
+            fontSize: 14,
+            controlHeight: 36,
             fontFamily:
               "'Segoe UI', system-ui, -apple-system, Roboto, Arial, sans-serif",
+          },
+          components: {
+            Layout: { bodyBg: '#f5f6f8', siderBg: '#ffffff', headerBg: '#ffffff' },
+            Card: { headerFontSize: 15, headerBg: 'transparent' },
+            // Calmer table chrome: the data is the only thing allowed to be loud.
+            Table: {
+              headerBg: '#fafafa',
+              headerColor: '#52514e',
+              headerSplitColor: 'transparent',
+              rowHoverBg: '#f2f7fd',
+              borderColor: '#f0f0ef',
+              cellPaddingBlock: 12,
+            },
+            Menu: { itemBorderRadius: 8, itemMarginInline: 8, itemHeight: 38 },
+            Statistic: { contentFontSize: 23 },
           },
         }}
       >

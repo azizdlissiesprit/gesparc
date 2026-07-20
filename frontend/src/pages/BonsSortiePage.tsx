@@ -1,21 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import {
-  Card,
-  Col,
-  Input,
-  Row,
-  Select,
-  Skeleton,
-  Space,
-  Statistic,
-  Table,
-  Tag,
-  Typography,
-  Button,
-} from 'antd'
+import { Card, Input, Select, Space, Table, Tag, Typography, Button } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import {
+  FileTextOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  TagsOutlined,
+  ToolOutlined,
+  UnorderedListOutlined,
+} from '@ant-design/icons'
+import StatsRow, { ACCENT } from '../components/StatTile'
 import dayjs from 'dayjs'
 import {
   fetchBonsSortie,
@@ -172,10 +167,10 @@ export default function BonsSortiePage() {
   }
 
   const cards = [
-    { title: 'Bons de sortie', value: int(stats?.total) },
-    { title: 'Lignes', value: int(stats?.nb_lignes) },
-    { title: 'Articles', value: int(stats?.nb_articles) },
-    { title: 'Bons de travail', value: int(stats?.nb_bt) },
+    { label: 'Bons de sortie', value: int(stats?.total), icon: <FileTextOutlined />, accent: ACCENT.neutral, hint: 'bons émis' },
+    { label: 'Lignes', value: int(stats?.nb_lignes), icon: <UnorderedListOutlined />, accent: ACCENT.info, hint: "lignes d'article" },
+    { label: 'Articles', value: int(stats?.nb_articles), icon: <TagsOutlined />, accent: ACCENT.violet, hint: 'références sorties' },
+    { label: 'Bons de travail', value: int(stats?.nb_bt), icon: <ToolOutlined />, accent: ACCENT.good, hint: 'interventions servies' },
   ]
 
   return (
@@ -184,19 +179,7 @@ export default function BonsSortiePage() {
         Bons de sortie (pour bons de travail)
       </Title>
 
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        {cards.map((c) => (
-          <Col xs={12} md={6} key={c.title}>
-            <Card>
-              {statsLoading ? (
-                <Skeleton active paragraph={false} />
-              ) : (
-                <Statistic title={c.title} value={c.value} />
-              )}
-            </Card>
-          </Col>
-        ))}
-      </Row>
+      <StatsRow items={cards} loading={statsLoading} />
 
       <Card style={{ marginBottom: 16 }} styles={{ body: { padding: 16 } }}>
         <Space wrap size="middle">
