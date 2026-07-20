@@ -9,6 +9,7 @@ import { fetchLookup } from '../api/vehicles'
 import type { BonCommande, LookupItem } from '../types'
 import BonCommandeStatsCards from '../components/BonCommandeStatsCards'
 import BonCommandeDetailDrawer from '../components/BonCommandeDetailDrawer'
+import ExportButton from '../components/ExportButton'
 
 const { Title } = Typography
 
@@ -240,6 +241,7 @@ export default function BonsCommandePage() {
           <Button icon={<ReloadOutlined />} onClick={resetFilters}>
             Réinitialiser
           </Button>
+          <ExportButton resource="bons-commande" params={{ search, statut, num_fourn: numFourn, num_parc: numParc, article }} />
         </Space>
       </Card>
 

@@ -7,6 +7,7 @@ import { fetchFournisseurs } from '../api/fournisseurs'
 import type { Fournisseur } from '../types'
 import FournisseurStatsCards from '../components/FournisseurStatsCards'
 import FournisseurDetailDrawer from '../components/FournisseurDetailDrawer'
+import ExportButton from '../components/ExportButton'
 
 const { Title } = Typography
 
@@ -130,6 +131,7 @@ export default function FournisseursPage() {
           <Button icon={<ReloadOutlined />} onClick={resetFilters}>
             Réinitialiser
           </Button>
+          <ExportButton resource="fournisseurs" params={{ search, statut }} />
         </Space>
       </Card>
 

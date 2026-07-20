@@ -8,6 +8,7 @@ import { fetchDemandes, fetchDemandesParUgp } from '../api/demandes'
 import { fetchLookup } from '../api/vehicles'
 import type { Demande, DemandeParUgp, LookupItem } from '../types'
 import DemandeStatsCards from '../components/DemandeStatsCards'
+import ExportButton from '../components/ExportButton'
 
 const { Title } = Typography
 
@@ -253,6 +254,7 @@ export default function DemandesInterventionPage() {
           <Button icon={<ReloadOutlined />} onClick={resetFilters}>
             Réinitialiser
           </Button>
+          <ExportButton resource="demandes" params={{ search, statut, num_struct: numStruct, num_parc: numParc, genre }} />
         </Space>
       </Card>
 

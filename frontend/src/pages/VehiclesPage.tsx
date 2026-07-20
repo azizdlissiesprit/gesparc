@@ -18,6 +18,7 @@ import { etatColor } from '../utils/etat'
 import { CATEGORIE_OPTIONS, categorieTag } from '../utils/categorie'
 import VehicleStatsCards from '../components/VehicleStatsCards'
 import VehicleDetailDrawer from '../components/VehicleDetailDrawer'
+import ExportButton from '../components/ExportButton'
 
 const { Title } = Typography
 
@@ -215,6 +216,7 @@ export default function VehiclesPage() {
           <Button icon={<ReloadOutlined />} onClick={resetFilters}>
             Réinitialiser
           </Button>
+          <ExportButton resource="vehicules" params={{ search, etat, num_struct: numStruct, categorie }} />
         </Space>
       </Card>
 

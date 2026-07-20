@@ -9,6 +9,7 @@ import { fetchLookup } from '../api/vehicles'
 import type { LookupItem, OrdreMission } from '../types'
 import OrdreMissionStatsCards from '../components/OrdreMissionStatsCards'
 import OrdreMissionDetailDrawer from '../components/OrdreMissionDetailDrawer'
+import ExportButton from '../components/ExportButton'
 
 const { Title } = Typography
 
@@ -183,6 +184,7 @@ export default function OrdresMissionPage() {
           <Button icon={<ReloadOutlined />} onClick={resetFilters}>
             Réinitialiser
           </Button>
+          <ExportButton resource="ordres-mission" params={{ search, statut, num_struct: numStruct }} />
         </Space>
       </Card>
 

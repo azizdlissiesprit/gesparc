@@ -10,6 +10,7 @@ import type { BonTravail, LookupItem } from '../types'
 import BonTravailStatsCards from '../components/BonTravailStatsCards'
 import BonTravailDetailDrawer from '../components/BonTravailDetailDrawer'
 import BtBreakdown from '../components/BtBreakdown'
+import ExportButton from '../components/ExportButton'
 
 const { Title } = Typography
 
@@ -222,6 +223,7 @@ export default function BonsTravailPage() {
           <Button icon={<ReloadOutlined />} onClick={resetFilters}>
             Réinitialiser
           </Button>
+          <ExportButton resource="bons-travail" params={{ search, nature, mode, num_struct: numStruct }} />
         </Space>
       </Card>
 

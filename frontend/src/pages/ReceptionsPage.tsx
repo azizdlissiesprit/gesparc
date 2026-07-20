@@ -20,6 +20,7 @@ import {
 import { fetchLookup } from '../api/vehicles'
 import type { LookupItem, Reception } from '../types'
 import BreakdownGrid from '../components/BreakdownGrid'
+import ExportButton from '../components/ExportButton'
 
 const { Title } = Typography
 
@@ -249,6 +250,7 @@ export default function ReceptionsPage() {
           <Button icon={<ReloadOutlined />} onClick={resetFilters}>
             Réinitialiser
           </Button>
+          <ExportButton resource="receptions" params={{ search, statut, num_fourn: numFourn, num_parc: numParc, article }} />
         </Space>
       </Card>
 

@@ -8,6 +8,7 @@ import { fetchReformes } from '../api/reformes'
 import { fetchLookup } from '../api/vehicles'
 import type { LookupItem, ReformeLigne, ReformeStatut } from '../types'
 import ReformeStatsCards from '../components/ReformeStatsCards'
+import ExportButton from '../components/ExportButton'
 
 const { Title } = Typography
 
@@ -175,6 +176,7 @@ export default function ReformesPage() {
           <Button icon={<ReloadOutlined />} onClick={resetFilters}>
             Réinitialiser
           </Button>
+          <ExportButton resource="reformes" params={{ search, statut, num_struct: numStruct }} />
         </Space>
       </Card>
 

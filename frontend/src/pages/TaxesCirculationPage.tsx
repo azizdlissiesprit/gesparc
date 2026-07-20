@@ -9,6 +9,7 @@ import { fetchLookup } from '../api/vehicles'
 import type { LookupItem, TaxeCirculation, ValidityStatut } from '../types'
 import { STATUT_META, STATUT_OPTIONS } from '../utils/statut'
 import TaxeStatsCards from '../components/TaxeStatsCards'
+import ExportButton from '../components/ExportButton'
 
 const { Title } = Typography
 
@@ -198,6 +199,7 @@ export default function TaxesCirculationPage() {
           <Button icon={<ReloadOutlined />} onClick={resetFilters}>
             Réinitialiser
           </Button>
+          <ExportButton resource="taxes-circulation" params={{ search, nature, statut, num_struct: numStruct }} />
         </Space>
       </Card>
 

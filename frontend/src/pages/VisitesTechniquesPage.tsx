@@ -9,6 +9,7 @@ import { fetchLookup } from '../api/vehicles'
 import type { LookupItem, ValidityStatut, VisiteTechnique } from '../types'
 import { STATUT_META, STATUT_OPTIONS } from '../utils/statut'
 import VisiteStatsCards from '../components/VisiteStatsCards'
+import ExportButton from '../components/ExportButton'
 
 const { Title } = Typography
 
@@ -161,6 +162,7 @@ export default function VisitesTechniquesPage() {
           <Button icon={<ReloadOutlined />} onClick={resetFilters}>
             Réinitialiser
           </Button>
+          <ExportButton resource="visites-techniques" params={{ search, statut, num_struct: numStruct }} />
         </Space>
       </Card>
 

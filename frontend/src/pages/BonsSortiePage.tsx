@@ -20,6 +20,7 @@ import {
 import { fetchLookup } from '../api/vehicles'
 import type { BonSortie, LookupItem } from '../types'
 import BreakdownGrid from '../components/BreakdownGrid'
+import ExportButton from '../components/ExportButton'
 
 const { Title } = Typography
 
@@ -265,6 +266,7 @@ export default function BonsSortiePage() {
           <Button icon={<ReloadOutlined />} onClick={resetFilters}>
             Réinitialiser
           </Button>
+          <ExportButton resource="bons-sortie" params={{ search, mode, num_mag: numMag, num_parc: numParc, article, statut }} />
         </Space>
       </Card>
 

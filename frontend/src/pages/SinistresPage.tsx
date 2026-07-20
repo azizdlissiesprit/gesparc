@@ -8,6 +8,7 @@ import { fetchSinistres } from '../api/sinistres'
 import type { Sinistre } from '../types'
 import SinistreStatsCards from '../components/SinistreStatsCards'
 import SinistreDetailDrawer from '../components/SinistreDetailDrawer'
+import ExportButton from '../components/ExportButton'
 
 const { Title } = Typography
 
@@ -179,6 +180,7 @@ export default function SinistresPage() {
           <Button icon={<ReloadOutlined />} onClick={resetFilters}>
             Réinitialiser
           </Button>
+          <ExportButton resource="sinistres" params={{ search, nature, statut }} />
         </Space>
       </Card>
 

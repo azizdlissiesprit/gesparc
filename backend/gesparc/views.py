@@ -5,7 +5,7 @@ from rest_framework.decorators import api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from . import db, queries
+from . import db, export, queries
 
 
 def _int_param(request: Request, name: str, default=None):
@@ -402,6 +402,15 @@ def carburant_list(request: Request) -> Response:
 @api_view(["GET"])
 def carburant_stats(request: Request) -> Response:
     return Response(queries.carburant_stats())
+
+
+@api_view(["GET"])
+def export_csv(request: Request, resource: str):
+    """Stream any list as a filtered CSV — same filters as the screen."""
+    try:
+        return export.csv_response(request, resource)
+    except KeyError:
+        return Response({"detail": f"Export inconnu: {resource}"}, status=404)
 
 
 @api_view(["GET"])

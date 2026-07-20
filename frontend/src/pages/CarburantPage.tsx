@@ -9,6 +9,7 @@ import type { LigneCarburant, LookupItem } from '../types'
 import { CATEGORIE_OPTIONS, categorieTag } from '../utils/categorie'
 import CarburantStatsCards from '../components/CarburantStatsCards'
 import CarburantDetailDrawer from '../components/CarburantDetailDrawer'
+import ExportButton from '../components/ExportButton'
 
 const { Title } = Typography
 
@@ -240,6 +241,7 @@ export default function CarburantPage() {
           <Button icon={<ReloadOutlined />} onClick={resetFilters}>
             Réinitialiser
           </Button>
+          <ExportButton resource="carburant" params={{ search, energie, annee, num_struct: numStruct, categorie }} />
         </Space>
       </Card>
 

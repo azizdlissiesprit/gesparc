@@ -8,6 +8,7 @@ import { fetchBonsTravail } from '../api/bonsTravail'
 import { fetchLookup } from '../api/vehicles'
 import type { BonTravail, LookupItem } from '../types'
 import BonTravailDetailDrawer from '../components/BonTravailDetailDrawer'
+import ExportButton from '../components/ExportButton'
 
 const { Title } = Typography
 
@@ -198,6 +199,7 @@ export default function HistoriqueMaintenancePage() {
           <Button icon={<ReloadOutlined />} onClick={resetFilters}>
             Réinitialiser
           </Button>
+          <ExportButton resource="bons-travail" params={{ search, nature, mode, num_struct: numStruct }} />
         </Space>
       </Card>
 

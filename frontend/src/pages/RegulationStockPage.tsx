@@ -8,6 +8,7 @@ import { fetchMouvements } from '../api/mouvements'
 import { fetchLookup } from '../api/vehicles'
 import type { LookupItem, MouvementStock } from '../types'
 import MvtStatsCards from '../components/MvtStatsCards'
+import ExportButton from '../components/ExportButton'
 
 const { Title } = Typography
 
@@ -212,6 +213,7 @@ export default function RegulationStockPage() {
           <Button icon={<ReloadOutlined />} onClick={resetFilters}>
             Réinitialiser
           </Button>
+          <ExportButton resource="mouvements-stock" params={{ search, type_mvt: typeMvt, article, num_parc: numParc }} />
         </Space>
       </Card>
 

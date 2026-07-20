@@ -7,6 +7,7 @@ import dayjs from 'dayjs'
 import { fetchBonsTravail } from '../api/bonsTravail'
 import { fetchLookup } from '../api/vehicles'
 import type { BonTravail, LookupItem } from '../types'
+import ExportButton from '../components/ExportButton'
 
 const { Title } = Typography
 
@@ -158,6 +159,7 @@ export default function SortiesVehiculesPage() {
           <Button icon={<ReloadOutlined />} onClick={resetFilters}>
             Réinitialiser
           </Button>
+          <ExportButton resource="bons-travail" params={{ search, etat, num_struct: numStruct }} />
         </Space>
       </Card>
 

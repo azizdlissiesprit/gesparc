@@ -54,5 +54,6 @@ urlpatterns = [
     path("exploitation/stats/", views.exploitation_stats, name="exploitation-stats"),
     path("carburant/", views.carburant_list, name="carburant-list"),
     path("carburant/stats/", views.carburant_stats, name="carburant-stats"),
+    path("export/<str:resource>/", views.export_csv, name="export-csv"),
     path("lookups/<str:name>/", views.lookups, name="lookups"),
 ]

@@ -8,6 +8,7 @@ import { fetchLookup } from '../api/vehicles'
 import type { Article, LookupItem } from '../types'
 import ArticleStatsCards from '../components/ArticleStatsCards'
 import ArticleDetailDrawer from '../components/ArticleDetailDrawer'
+import ExportButton from '../components/ExportButton'
 
 const { Title } = Typography
 
@@ -176,6 +177,7 @@ export default function StockArticlesPage() {
           <Button icon={<ReloadOutlined />} onClick={resetFilters}>
             Réinitialiser
           </Button>
+          <ExportButton resource="articles" params={{ search, marque, statut }} />
         </Space>
       </Card>
 
