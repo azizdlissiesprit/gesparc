@@ -2056,6 +2056,147 @@ def carburant_annees() -> list[dict]:
     )
 
 
+# ---- Véhicule 360 (everything about one vehicle) ---------------------------
+# Per-section cap: the busiest vehicle in the data has ~190 rows in its largest
+# section, so this returns a complete picture while bounding a pathological
+# payload. The client holds the full set, so paging those tabs client-side is
+# legitimate here (unlike the main lists, which are server-paginated).
+V360_LIMIT = 200
+# A vehicle cannot plausibly cover more than this in one month (>660 km/day
+# sustained). Months above it are data-entry errors and are excluded from
+# distance-derived metrics — see the note in vehicle_360.
+PLAUSIBLE_MONTHLY_KM = 20_000
+
+
+def vehicle_360(num_veh: str) -> dict[str, Any] | None:
+    """Consolidated history for one vehicle: identity, costs, usage, events."""
+    vehicule = get_vehicle(num_veh)
+    if vehicule is None:
+        return None
+
+    p = {"veh": num_veh}
+
+    totals = oracle.fetch_one(
+        """
+        SELECT COUNT(*) AS nb_bt,
+               COALESCE(SUM(COALESCE(montant_piece, 0) + COALESCE(montant_main_oeuvre, 0)
+                       + COALESCE(montant_rep_externe, 0)), 0) AS cout_maintenance
+        FROM v_gesparc_bon_travail WHERE num_veh = :veh
+        """, p) or {}
+    carb = oracle.fetch_one(
+        """
+        SELECT COUNT(*) AS nb_lignes,
+               COALESCE(SUM(GREATEST(quantite, 0)), 0) AS litres,
+               COALESCE(SUM(GREATEST(quantite, 0) * COALESCE(prix_unitaire, 0)), 0) AS cout
+        FROM ligne_carburant WHERE num_veh = :veh
+        """, p) or {}
+    # km_parc_n carries data errors: fleet-wide, ~2% of months record more than
+    # PLAUSIBLE_MONTHLY_KM (>660 km/day sustained) and those rows alone account
+    # for ~70% of all recorded km. Left raw, every km-derived figure is
+    # meaningless, so distance metrics are computed over plausible months only.
+    expl = oracle.fetch_one(
+        f"""
+        SELECT COALESCE(SUM(km_parc_n), 0)      AS km_total,
+               COALESCE(SUM(qt_carb_cons_n), 0) AS conso_total,
+               -- median of the monthly ratios: robust to the outliers above,
+               -- and matches the per-month figures (~8-9 L/100km) that check out.
+               ROUND(percentile_cont(0.5) WITHIN GROUP (
+                   ORDER BY qt_carb_cons_n / km_parc_n * 100
+               )::numeric, 2) AS conso_mediane
+        FROM v_gesparc_exploitation
+        WHERE num_veh = :veh
+          AND km_parc_n > 0 AND km_parc_n <= {PLAUSIBLE_MONTHLY_KM}
+          AND qt_carb_cons_n > 0
+        """, p) or {}
+    counts = oracle.fetch_one(
+        """
+        SELECT (SELECT COUNT(*) FROM dem_intervention WHERE num_veh = :veh) AS nb_demandes,
+               (SELECT COUNT(*) FROM sinistre WHERE num_veh = :veh)          AS nb_sinistres,
+               (SELECT COUNT(*) FROM ordre_mission WHERE num_veh = :veh)     AS nb_missions
+        """, p) or {}
+
+    km = float(expl.get("km_total") or 0)
+    cout = float(totals.get("cout_maintenance") or 0)
+
+    kpis = {
+        **totals, **counts,
+        "carburant_litres": carb.get("litres"),
+        "carburant_cout": carb.get("cout"),
+        "km_total": expl.get("km_total"),
+        "conso_total": expl.get("conso_total"),
+        # Unit economics — the "is it worth keeping?" numbers.
+        "cout_par_km": round(cout / km, 3) if km else None,
+        # Median monthly L/100km. Consumption comes from exploitation's own
+        # qt_carb_cons_n, never from the carburant ledger — the two sources
+        # cover different periods, so crossing them gives a nonsense ratio.
+        "conso_moyenne": expl.get("conso_mediane"),
+    }
+
+    cout_par_annee = oracle.fetch_all(
+        """
+        SELECT TO_CHAR(date_entree_parc, 'YYYY') AS annee,
+               COALESCE(SUM(COALESCE(montant_piece, 0) + COALESCE(montant_main_oeuvre, 0)
+                       + COALESCE(montant_rep_externe, 0)), 0) AS cout,
+               COUNT(*) AS nombre
+        FROM v_gesparc_bon_travail
+        WHERE num_veh = :veh AND date_entree_parc IS NOT NULL
+        GROUP BY TO_CHAR(date_entree_parc, 'YYYY') ORDER BY annee
+        """, p)
+    km_par_annee = oracle.fetch_all(
+        f"""
+        SELECT annee::text AS annee,
+               COALESCE(SUM(km_parc_n), 0)      AS km,
+               COALESCE(SUM(qt_carb_cons_n), 0) AS conso
+        FROM v_gesparc_exploitation
+        WHERE num_veh = :veh AND annee IS NOT NULL
+          AND km_parc_n > 0 AND km_parc_n <= {PLAUSIBLE_MONTHLY_KM}
+        GROUP BY annee ORDER BY annee
+        """, p)
+
+    lim = {"veh": num_veh, "lim": V360_LIMIT}
+    bons_travail = [
+        _decorate_bt(r) for r in oracle.fetch_all(
+            _BT_BASE + " WHERE bt.num_veh = :veh ORDER BY date_entree DESC NULLS LAST LIMIT :lim",
+            lim)
+    ]
+    demandes = [
+        _decorate_dem(r) for r in oracle.fetch_all(
+            _DEM_BASE + " WHERE d.num_veh = :veh ORDER BY date_demande DESC NULLS LAST LIMIT :lim",
+            lim)
+    ]
+    sinistres = [
+        _decorate_sin(r) for r in oracle.fetch_all(
+            _SIN_BASE + " WHERE s.num_veh = :veh ORDER BY date_sinistre DESC NULLS LAST LIMIT :lim",
+            lim)
+    ]
+    missions = [
+        _decorate_om(r) for r in oracle.fetch_all(
+            _OM_BASE + " WHERE om.num_veh = :veh ORDER BY date_depart DESC NULLS LAST LIMIT :lim",
+            lim)
+    ]
+    carburant = [
+        _decorate_carb(r) for r in oracle.fetch_all(
+            _CARB_BASE + " WHERE c.num_veh = :veh ORDER BY date_piece DESC NULLS LAST LIMIT :lim",
+            lim)
+    ]
+    exploitation = oracle.fetch_all(
+        _EXPL_BASE + " WHERE e.num_veh = :veh ORDER BY annee DESC, mois DESC LIMIT :lim", lim)
+
+    return {
+        "vehicule": vehicule,
+        "kpis": kpis,
+        "cout_par_annee": cout_par_annee,
+        "km_par_annee": km_par_annee,
+        "bons_travail": bons_travail,
+        "demandes": demandes,
+        "sinistres": sinistres,
+        "missions": missions,
+        "carburant": carburant,
+        "exploitation": exploitation,
+        "limite": V360_LIMIT,
+    }
+
+
 # ---- Overview (home dashboard aggregates) ----------------------------------
 
 def overview() -> dict[str, Any]:

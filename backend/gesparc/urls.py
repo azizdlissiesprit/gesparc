@@ -7,6 +7,8 @@ urlpatterns = [
     path("overview/", views.overview, name="overview"),
     path("vehicles/", views.vehicle_list, name="vehicle-list"),
     path("vehicles/stats/", views.vehicle_stats, name="vehicle-stats"),
+    # 360 before the greedy detail route so it isn't swallowed by <str:num_veh>
+    path("vehicles/<path:num_veh>/360/", views.vehicle_360, name="vehicle-360"),
     path("vehicles/<str:num_veh>/", views.vehicle_detail, name="vehicle-detail"),
     path("visites-techniques/", views.visite_technique_list, name="visite-list"),
     path(

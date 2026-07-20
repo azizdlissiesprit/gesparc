@@ -62,6 +62,15 @@ def vehicle_detail(request: Request, num_veh: str) -> Response:
 
 
 @api_view(["GET"])
+def vehicle_360(request: Request, num_veh: str) -> Response:
+    """Everything about one vehicle: identity, costs, usage and events."""
+    data = queries.vehicle_360(num_veh)
+    if data is None:
+        return Response({"detail": "Véhicule introuvable"}, status=404)
+    return Response(data)
+
+
+@api_view(["GET"])
 def visite_technique_list(request: Request) -> Response:
     data = queries.list_visites_techniques(
         search=request.query_params.get("search") or None,

@@ -11,7 +11,12 @@ import {
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { EyeOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import {
+  EyeOutlined,
+  ProfileOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from '@ant-design/icons'
 import { fetchLookup, fetchVehicles } from '../api/vehicles'
 import type { LookupItem, VehicleListItem } from '../types'
 import { etatColor } from '../utils/etat'
@@ -21,12 +26,14 @@ import VehicleDetailDrawer from '../components/VehicleDetailDrawer'
 import ExportButton from '../components/ExportButton'
 import { tableErrorLocale } from '../utils/tableLocale'
 import { useTableSort } from '../utils/useTableSort'
+import { useNavigate } from 'react-router-dom'
 
 const { Title } = Typography
 
 const clean = (s: string | null | undefined) => (s ? s.trim() : '')
 
 export default function VehiclesPage() {
+  const navigate = useNavigate()
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [etat, setEtat] = useState<number | undefined>()
@@ -135,16 +142,26 @@ export default function VehiclesPage() {
       {
         title: '',
         key: 'actions',
-        width: 100,
+        width: 150,
         render: (_v, r) => (
-          <Button
-            size="small"
-            type="link"
-            icon={<EyeOutlined />}
-            onClick={() => setSelected(r.num_veh)}
-          >
-            Détails
-          </Button>
+          <Space size={0}>
+            <Button
+              size="small"
+              type="link"
+              icon={<EyeOutlined />}
+              onClick={() => setSelected(r.num_veh)}
+            >
+              Détails
+            </Button>
+            <Button
+              size="small"
+              type="link"
+              icon={<ProfileOutlined />}
+              onClick={() => navigate(`/vehicules/${encodeURIComponent(r.num_veh)}`)}
+            >
+              360
+            </Button>
+          </Space>
         ),
       },
     ],

@@ -35,6 +35,7 @@ import ExploitationPage from './pages/ExploitationPage'
 import CarburantPage from './pages/CarburantPage'
 import TaxesCirculationPage from './pages/TaxesCirculationPage'
 import Placeholder from './pages/Placeholder'
+import Vehicle360Page from './pages/Vehicle360Page'
 import ConnectionBanner from './components/ConnectionBanner'
 
 const { Header, Sider, Content } = Layout
@@ -145,6 +146,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/vehicules" element={<VehiclesPage />} />
+            <Route path="/vehicules/:numVeh" element={<Vehicle360Page />} />
             <Route path="/visites" element={<VisitesTechniquesPage />} />
             <Route path="/reformes" element={<ReformesPage />} />
             <Route path="/bons-travail" element={<BonsTravailPage />} />

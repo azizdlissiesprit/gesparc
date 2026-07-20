@@ -769,3 +769,31 @@ export interface OverviewData {
   cout_composition: { pieces: number; main_oeuvre: number; externe: number }
   cout_maintenance_par_annee: { annee: string; cout: number; nombre: number }[]
 }
+
+/** Consolidated history for one vehicle (Véhicule 360). */
+export interface Vehicle360 {
+  vehicule: VehicleDetail
+  kpis: {
+    nb_bt: number
+    cout_maintenance: number | null
+    nb_demandes: number
+    nb_sinistres: number
+    nb_missions: number
+    carburant_litres: number | null
+    carburant_cout: number | null
+    km_total: number | null
+    conso_total: number | null
+    cout_par_km: number | null
+    /** Median monthly L/100km — robust to the km outliers in the source data. */
+    conso_moyenne: number | null
+  }
+  cout_par_annee: { annee: string; cout: number; nombre: number }[]
+  km_par_annee: { annee: string; km: number; conso: number }[]
+  bons_travail: BonTravail[]
+  demandes: Demande[]
+  sinistres: Sinistre[]
+  missions: OrdreMission[]
+  carburant: LigneCarburant[]
+  exploitation: Exploitation[]
+  limite: number
+}
