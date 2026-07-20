@@ -35,6 +35,7 @@ import ExploitationPage from './pages/ExploitationPage'
 import CarburantPage from './pages/CarburantPage'
 import TaxesCirculationPage from './pages/TaxesCirculationPage'
 import Placeholder from './pages/Placeholder'
+import ConnectionBanner from './components/ConnectionBanner'
 
 const { Header, Sider, Content } = Layout
 const { Title } = Typography
@@ -140,6 +141,7 @@ export default function App() {
           <span style={{ color: '#898781' }}>Tunisie Telecom</span>
         </Header>
         <Content style={{ margin: 0, padding: 24 }}>
+          <ConnectionBanner />
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/vehicules" element={<VehiclesPage />} />

@@ -9,6 +9,7 @@ import type { Sinistre } from '../types'
 import SinistreStatsCards from '../components/SinistreStatsCards'
 import SinistreDetailDrawer from '../components/SinistreDetailDrawer'
 import ExportButton from '../components/ExportButton'
+import { tableErrorLocale } from '../utils/tableLocale'
 
 const { Title } = Typography
 
@@ -44,7 +45,7 @@ export default function SinistresPage() {
     return () => clearTimeout(t)
   }, [searchInput])
 
-  const { data, isFetching } = useQuery({
+  const { data, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['sinistres', { search, nature, statut, page, pageSize }],
     queryFn: () =>
       fetchSinistres({
@@ -191,6 +192,7 @@ export default function SinistresPage() {
           loading={isFetching}
           columns={columns}
           dataSource={data?.results ?? []}
+          locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1050 }}
           pagination={{
             current: page,

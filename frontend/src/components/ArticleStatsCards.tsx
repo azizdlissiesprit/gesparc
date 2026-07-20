@@ -11,7 +11,7 @@ import StatsRow, { ACCENT } from './StatTile'
 import { fmtInt, fmtMoneyShort } from '../charts/theme'
 
 export default function ArticleStatsCards() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['article-stats'],
     queryFn: fetchArticleStats,
   })
@@ -19,6 +19,8 @@ export default function ArticleStatsCards() {
   return (
     <StatsRow
       loading={isLoading}
+      error={isError ? error : undefined}
+      onRetry={refetch}
       items={[
         { label: 'Total articles', value: fmtInt(data?.total), icon: <AppstoreOutlined />, accent: ACCENT.neutral, hint: 'références au catalogue' },
         { label: 'En stock', value: fmtInt(data?.en_stock), icon: <CheckCircleOutlined />, accent: ACCENT.good, hint: 'quantité disponible' },

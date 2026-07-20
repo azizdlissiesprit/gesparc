@@ -10,6 +10,7 @@ import type { BonCommande, LookupItem } from '../types'
 import BonCommandeStatsCards from '../components/BonCommandeStatsCards'
 import BonCommandeDetailDrawer from '../components/BonCommandeDetailDrawer'
 import ExportButton from '../components/ExportButton'
+import { tableErrorLocale } from '../utils/tableLocale'
 
 const { Title } = Typography
 
@@ -63,7 +64,7 @@ export default function BonsCommandePage() {
     staleTime: 60_000,
   })
 
-  const { data, isFetching } = useQuery({
+  const { data, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['bons-commande', { search, statut, numFourn, numParc, article, page, pageSize }],
     queryFn: () =>
       fetchBonsCommande({
@@ -252,6 +253,7 @@ export default function BonsCommandePage() {
           loading={isFetching}
           columns={columns}
           dataSource={data?.results ?? []}
+          locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1150 }}
           pagination={{
             current: page,

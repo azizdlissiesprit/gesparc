@@ -9,6 +9,7 @@ import type { Article, LookupItem } from '../types'
 import ArticleStatsCards from '../components/ArticleStatsCards'
 import ArticleDetailDrawer from '../components/ArticleDetailDrawer'
 import ExportButton from '../components/ExportButton'
+import { tableErrorLocale } from '../utils/tableLocale'
 
 const { Title } = Typography
 
@@ -44,7 +45,7 @@ export default function StockArticlesPage() {
     staleTime: Infinity,
   })
 
-  const { data, isFetching } = useQuery({
+  const { data, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['articles', { search, marque, statut, page, pageSize }],
     queryFn: () =>
       fetchArticles({
@@ -188,6 +189,7 @@ export default function StockArticlesPage() {
           loading={isFetching}
           columns={columns}
           dataSource={data?.results ?? []}
+          locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1050 }}
           pagination={{
             current: page,

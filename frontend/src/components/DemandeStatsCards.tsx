@@ -11,7 +11,7 @@ import StatsRow, { ACCENT } from './StatTile'
 import { fmtInt } from '../charts/theme'
 
 export default function DemandeStatsCards() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['demande-stats'],
     queryFn: fetchDemandeStats,
   })
@@ -19,6 +19,8 @@ export default function DemandeStatsCards() {
   return (
     <StatsRow
       loading={isLoading}
+      error={isError ? error : undefined}
+      onRetry={refetch}
       items={[
         { label: 'Total demandes', value: fmtInt(data?.total), icon: <FileTextOutlined />, accent: ACCENT.neutral, hint: "demandes d'intervention" },
         { label: 'Finis', value: fmtInt(data?.finis), icon: <CheckCircleOutlined />, accent: ACCENT.good, hint: 'traitées' },

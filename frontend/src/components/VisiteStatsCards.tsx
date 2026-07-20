@@ -11,7 +11,7 @@ import StatsRow, { ACCENT } from './StatTile'
 import { fmtInt, fmtMoneyShort } from '../charts/theme'
 
 export default function VisiteStatsCards() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['visite-stats'],
     queryFn: fetchVisiteStats,
   })
@@ -19,6 +19,8 @@ export default function VisiteStatsCards() {
   return (
     <StatsRow
       loading={isLoading}
+      error={isError ? error : undefined}
+      onRetry={refetch}
       items={[
         { label: 'Total visites', value: fmtInt(data?.total), icon: <FileDoneOutlined />, accent: ACCENT.neutral, hint: 'visites enregistrées' },
         { label: 'Valides', value: fmtInt(data?.valides), icon: <CheckCircleOutlined />, accent: ACCENT.good, hint: 'à jour' },

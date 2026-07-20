@@ -69,7 +69,7 @@ const tableOf = (
 })
 
 export default function DashboardPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['overview'],
     queryFn: fetchOverview,
     staleTime: 60_000,
@@ -151,7 +151,7 @@ export default function DashboardPage() {
         Vue d'ensemble du parc, de la maintenance et des coûts — Tunisie Telecom
       </Text>
 
-      <StatsRow items={kpis} loading={isLoading} />
+      <StatsRow items={kpis} loading={isLoading} error={isError ? error : undefined} onRetry={refetch} />
 
       {/* Two measures, two charts — never two y-scales on one plot. */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
@@ -160,6 +160,8 @@ export default function DashboardPage() {
             title="Coût de maintenance par année"
             subtitle="Dépense de réparation en TND — années complètes"
             loading={isLoading}
+            error={isError ? error : undefined}
+            onRetry={refetch}
             empty={!cout.length}
             table={tableOf(
               'Année',
@@ -198,6 +200,8 @@ export default function DashboardPage() {
             title="Interventions par année"
             subtitle="Nombre de bons de travail ouverts"
             loading={isLoading}
+            error={isError ? error : undefined}
+            onRetry={refetch}
             empty={!cout.length}
             table={tableOf(
               'Année',
@@ -233,6 +237,8 @@ export default function DashboardPage() {
             title="Répartition du coût de maintenance"
             subtitle="Où va la dépense — part de chaque poste"
             loading={isLoading}
+            error={isError ? error : undefined}
+            onRetry={refetch}
             empty={!composition.length}
             table={tableOf(
               'Poste',
@@ -291,6 +297,8 @@ export default function DashboardPage() {
             title="Parc par état"
             subtitle="Répartition opérationnelle du parc"
             loading={isLoading}
+            error={isError ? error : undefined}
+            onRetry={refetch}
             empty={!etat.length}
             table={tableOf('État', 'Véhicules', etat)}
           >
@@ -330,6 +338,8 @@ export default function DashboardPage() {
             title="Parc par énergie"
             subtitle="Motorisation du parc"
             loading={isLoading}
+            error={isError ? error : undefined}
+            onRetry={refetch}
             empty={!energie.length}
             table={tableOf('Énergie', 'Véhicules', energie)}
           >
@@ -360,6 +370,8 @@ export default function DashboardPage() {
             title="Parc par genre"
             subtitle="Types de véhicules les plus fréquents"
             loading={isLoading}
+            error={isError ? error : undefined}
+            onRetry={refetch}
             empty={!genre.length}
             table={tableOf('Genre', 'Véhicules', genre)}
           >
@@ -399,6 +411,8 @@ export default function DashboardPage() {
             title="Top structures par taille de parc"
             subtitle="Structures détenant le plus de véhicules"
             loading={isLoading}
+            error={isError ? error : undefined}
+            onRetry={refetch}
             empty={!structures.length}
             table={tableOf('Structure', 'Véhicules', structures)}
           >
@@ -438,6 +452,8 @@ export default function DashboardPage() {
             title="Bons de travail par nature"
             subtitle="Répartition des interventions"
             loading={isLoading}
+            error={isError ? error : undefined}
+            onRetry={refetch}
             empty={!nature.length}
             table={tableOf('Nature', 'Bons de travail', nature)}
           >

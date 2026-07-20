@@ -8,6 +8,7 @@ import type { Fournisseur } from '../types'
 import FournisseurStatsCards from '../components/FournisseurStatsCards'
 import FournisseurDetailDrawer from '../components/FournisseurDetailDrawer'
 import ExportButton from '../components/ExportButton'
+import { tableErrorLocale } from '../utils/tableLocale'
 
 const { Title } = Typography
 
@@ -34,7 +35,7 @@ export default function FournisseursPage() {
     return () => clearTimeout(t)
   }, [searchInput])
 
-  const { data, isFetching } = useQuery({
+  const { data, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['fournisseurs', { search, statut, page, pageSize }],
     queryFn: () =>
       fetchFournisseurs({
@@ -142,6 +143,7 @@ export default function FournisseursPage() {
           loading={isFetching}
           columns={columns}
           dataSource={data?.results ?? []}
+          locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1000 }}
           pagination={{
             current: page,

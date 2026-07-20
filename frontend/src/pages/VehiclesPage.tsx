@@ -19,6 +19,7 @@ import { CATEGORIE_OPTIONS, categorieTag } from '../utils/categorie'
 import VehicleStatsCards from '../components/VehicleStatsCards'
 import VehicleDetailDrawer from '../components/VehicleDetailDrawer'
 import ExportButton from '../components/ExportButton'
+import { tableErrorLocale } from '../utils/tableLocale'
 
 const { Title } = Typography
 
@@ -57,7 +58,7 @@ export default function VehiclesPage() {
     staleTime: 60_000,
   })
 
-  const { data, isFetching } = useQuery({
+  const { data, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['vehicles', { search, etat, numStruct, categorie, page, pageSize }],
     queryFn: () =>
       fetchVehicles({
@@ -227,6 +228,7 @@ export default function VehiclesPage() {
           loading={isFetching}
           columns={columns}
           dataSource={data?.results ?? []}
+          locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 900 }}
           pagination={{
             current: page,

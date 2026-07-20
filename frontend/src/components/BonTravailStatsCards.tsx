@@ -5,7 +5,7 @@ import StatsRow, { ACCENT } from './StatTile'
 import { fmtInt, fmtMoneyShort } from '../charts/theme'
 
 export default function BonTravailStatsCards() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['bt-stats'],
     queryFn: fetchBonTravailStats,
   })
@@ -13,6 +13,8 @@ export default function BonTravailStatsCards() {
   return (
     <StatsRow
       loading={isLoading}
+      error={isError ? error : undefined}
+      onRetry={refetch}
       items={[
         { label: 'Total bons de travail', value: fmtInt(data?.total), icon: <ToolOutlined />, accent: ACCENT.neutral, hint: 'interventions enregistrées' },
         { label: 'Interne', value: fmtInt(data?.internes), icon: <HomeOutlined />, accent: ACCENT.info, hint: 'réalisées en atelier' },

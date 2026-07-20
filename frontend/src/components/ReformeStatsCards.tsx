@@ -10,7 +10,7 @@ import StatsRow, { ACCENT } from './StatTile'
 import { fmtInt, fmtMoneyShort } from '../charts/theme'
 
 export default function ReformeStatsCards() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['reforme-stats'],
     queryFn: fetchReformeStats,
   })
@@ -18,6 +18,8 @@ export default function ReformeStatsCards() {
   return (
     <StatsRow
       loading={isLoading}
+      error={isError ? error : undefined}
+      onRetry={refetch}
       items={[
         { label: 'Total réformes', value: fmtInt(data?.total), icon: <StopOutlined />, accent: ACCENT.neutral, hint: 'véhicules réformés' },
         { label: 'Vendus', value: fmtInt(data?.vendus), icon: <DollarOutlined />, accent: ACCENT.info, hint: 'sortis des comptes' },

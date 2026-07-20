@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Card, Col, Row, Skeleton } from 'antd'
 import { CHART } from '../charts/theme'
+import ErrorState from './ErrorState'
 
 /**
  * Icon-chip accents. These are decorative (the label carries identity), but
@@ -95,10 +96,23 @@ export function StatTile({
 export default function StatsRow({
   items,
   loading,
+  error,
+  onRetry,
 }: {
   items: StatTileProps[]
   loading?: boolean
+  error?: unknown
+  onRetry?: () => void
 }) {
+  // A failed stats fetch collapses to one message rather than a row of dashes.
+  if (error) {
+    return (
+      <Card style={{ marginBottom: 16 }} styles={{ body: { padding: 8, minHeight: 96 } }}>
+        <ErrorState error={error} onRetry={onRetry} compact />
+      </Card>
+    )
+  }
+
   const span = items.length >= 6 ? 4 : items.length === 5 ? 5 : 6
   return (
     <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>

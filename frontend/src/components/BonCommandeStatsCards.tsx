@@ -11,7 +11,7 @@ import StatsRow, { ACCENT } from './StatTile'
 import { fmtInt, fmtMoneyShort } from '../charts/theme'
 
 export default function BonCommandeStatsCards() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['bc-stats'],
     queryFn: fetchBonCommandeStats,
   })
@@ -19,6 +19,8 @@ export default function BonCommandeStatsCards() {
   return (
     <StatsRow
       loading={isLoading}
+      error={isError ? error : undefined}
+      onRetry={refetch}
       items={[
         { label: 'Total commandes', value: fmtInt(data?.total), icon: <ShoppingCartOutlined />, accent: ACCENT.neutral, hint: 'bons de commande' },
         { label: 'Réceptionnées', value: fmtInt(data?.receptionnes), icon: <CheckCircleOutlined />, accent: ACCENT.good, hint: 'livraison enregistrée' },

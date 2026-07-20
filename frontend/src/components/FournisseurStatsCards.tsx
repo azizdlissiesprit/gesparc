@@ -5,7 +5,7 @@ import StatsRow, { ACCENT } from './StatTile'
 import { fmtInt } from '../charts/theme'
 
 export default function FournisseurStatsCards() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['fournisseur-stats'],
     queryFn: fetchFournisseurStats,
   })
@@ -13,6 +13,8 @@ export default function FournisseurStatsCards() {
   return (
     <StatsRow
       loading={isLoading}
+      error={isError ? error : undefined}
+      onRetry={refetch}
       items={[
         { label: 'Total fournisseurs', value: fmtInt(data?.total), icon: <ShopOutlined />, accent: ACCENT.neutral, hint: 'référencés' },
         { label: 'Actifs', value: fmtInt(data?.actifs), icon: <CheckCircleOutlined />, accent: ACCENT.good, hint: 'peuvent être commandés' },

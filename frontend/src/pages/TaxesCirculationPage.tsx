@@ -10,6 +10,7 @@ import type { LookupItem, TaxeCirculation, ValidityStatut } from '../types'
 import { STATUT_META, STATUT_OPTIONS } from '../utils/statut'
 import TaxeStatsCards from '../components/TaxeStatsCards'
 import ExportButton from '../components/ExportButton'
+import { tableErrorLocale } from '../utils/tableLocale'
 
 const { Title } = Typography
 
@@ -50,7 +51,7 @@ export default function TaxesCirculationPage() {
     staleTime: 60_000,
   })
 
-  const { data, isFetching } = useQuery({
+  const { data, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['taxes', { search, nature, statut, numStruct, page, pageSize }],
     queryFn: () =>
       fetchTaxes({
@@ -210,6 +211,7 @@ export default function TaxesCirculationPage() {
           loading={isFetching}
           columns={columns}
           dataSource={data?.results ?? []}
+          locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1000 }}
           pagination={{
             current: page,

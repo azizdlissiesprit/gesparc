@@ -7,10 +7,18 @@ import frFR from 'antd/locale/fr_FR'
 import 'antd/dist/reset.css'
 import './index.css'
 import App from './App.tsx'
+import AppErrorBoundary from './components/AppErrorBoundary'
+import { retryDelay, shouldRetry } from './utils/errors'
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { refetchOnWindowFocus: false, staleTime: 30_000 },
+    queries: {
+      refetchOnWindowFocus: false,
+      staleTime: 30_000,
+      // Ride out a cold start / transient blip, but never retry a 4xx.
+      retry: shouldRetry,
+      retryDelay,
+    },
   },
 })
 
@@ -50,9 +58,11 @@ createRoot(document.getElementById('root')!).render(
         }}
       >
         <AntApp>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
+          <AppErrorBoundary>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </AppErrorBoundary>
         </AntApp>
       </ConfigProvider>
     </QueryClientProvider>

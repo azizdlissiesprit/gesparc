@@ -11,7 +11,7 @@ import StatsRow, { ACCENT } from './StatTile'
 import { fmtInt } from '../charts/theme'
 
 export default function VehicleStatsCards() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['vehicle-stats'],
     queryFn: fetchVehicleStats,
   })
@@ -24,6 +24,8 @@ export default function VehicleStatsCards() {
   return (
     <StatsRow
       loading={isLoading}
+      error={isError ? error : undefined}
+      onRetry={refetch}
       items={[
         { label: 'Total véhicules', value: fmtInt(total), icon: <CarOutlined />, accent: ACCENT.neutral, hint: 'parc immatriculé' },
         { label: 'En circulation', value: fmtInt(countFor(1)), icon: <CheckCircleOutlined />, accent: ACCENT.good, hint: pct(countFor(1)) },

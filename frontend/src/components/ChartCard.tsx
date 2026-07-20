@@ -4,6 +4,7 @@ import { Card, Empty, Skeleton, Table, Tooltip as AntTooltip, Button } from 'ant
 import { AreaChartOutlined, TableOutlined } from '@ant-design/icons'
 import { ResponsiveContainer } from 'recharts'
 import { CHART } from '../charts/theme'
+import ErrorState from './ErrorState'
 
 export interface TableView {
   /** Column header for the category/dimension column. */
@@ -25,6 +26,8 @@ export default function ChartCard({
   subtitle,
   loading,
   empty,
+  error,
+  onRetry,
   height = 300,
   table,
   children,
@@ -33,12 +36,14 @@ export default function ChartCard({
   subtitle?: string
   loading: boolean
   empty?: boolean
+  error?: unknown
+  onRetry?: () => void
   height?: number
   table?: TableView
   children: ReactNode
 }) {
   const [asTable, setAsTable] = useState(false)
-  const showTable = asTable && !!table
+  const showTable = asTable && !!table && !error
 
   return (
     <Card
@@ -51,7 +56,7 @@ export default function ChartCard({
         </div>
       }
       extra={
-        table ? (
+        table && !error ? (
           <AntTooltip title={showTable ? 'Afficher le graphique' : 'Afficher les données'}>
             <Button
               type="text"
@@ -65,7 +70,9 @@ export default function ChartCard({
       }
       styles={{ body: { padding: showTable ? 0 : 16, height, overflow: 'auto' } }}
     >
-      {loading ? (
+      {error ? (
+        <ErrorState error={error} onRetry={onRetry} compact />
+      ) : loading ? (
         <div style={{ padding: showTable ? 16 : 0 }}>
           <Skeleton active />
         </div>

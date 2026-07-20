@@ -10,6 +10,7 @@ import { CATEGORIE_OPTIONS, categorieTag } from '../utils/categorie'
 import CarburantStatsCards from '../components/CarburantStatsCards'
 import CarburantDetailDrawer from '../components/CarburantDetailDrawer'
 import ExportButton from '../components/ExportButton'
+import { tableErrorLocale } from '../utils/tableLocale'
 
 const { Title } = Typography
 
@@ -55,7 +56,7 @@ export default function CarburantPage() {
     staleTime: 60_000,
   })
 
-  const { data, isFetching } = useQuery({
+  const { data, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['carburant', { search, energie, annee, numStruct, categorie, page, pageSize }],
     queryFn: () =>
       fetchCarburant({
@@ -252,6 +253,7 @@ export default function CarburantPage() {
           loading={isFetching}
           columns={columns}
           dataSource={data?.results ?? []}
+          locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1200 }}
           pagination={{
             current: page,

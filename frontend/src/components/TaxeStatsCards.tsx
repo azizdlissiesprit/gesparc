@@ -11,7 +11,7 @@ import StatsRow, { ACCENT } from './StatTile'
 import { fmtInt, fmtMoneyShort } from '../charts/theme'
 
 export default function TaxeStatsCards() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['taxe-stats'],
     queryFn: fetchTaxeStats,
   })
@@ -19,6 +19,8 @@ export default function TaxeStatsCards() {
   return (
     <StatsRow
       loading={isLoading}
+      error={isError ? error : undefined}
+      onRetry={refetch}
       items={[
         { label: 'Total taxes', value: fmtInt(data?.total), icon: <FileDoneOutlined />, accent: ACCENT.neutral, hint: 'vignettes et taxes' },
         { label: 'Valides', value: fmtInt(data?.valides), icon: <CheckCircleOutlined />, accent: ACCENT.good, hint: 'à jour' },

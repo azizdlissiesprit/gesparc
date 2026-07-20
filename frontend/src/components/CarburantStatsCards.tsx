@@ -11,7 +11,7 @@ import StatsRow, { ACCENT } from './StatTile'
 import { fmtInt, fmtMoneyShort } from '../charts/theme'
 
 export default function CarburantStatsCards() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['carburant-stats'],
     queryFn: fetchCarburantStats,
   })
@@ -19,6 +19,8 @@ export default function CarburantStatsCards() {
   return (
     <StatsRow
       loading={isLoading}
+      error={isError ? error : undefined}
+      onRetry={refetch}
       items={[
         { label: 'Transactions', value: fmtInt(data?.total), icon: <DatabaseOutlined />, accent: ACCENT.neutral, hint: 'lignes de distribution' },
         { label: 'Litres distribués', value: fmtMoneyShort(data?.litres_total), icon: <FireOutlined />, accent: ACCENT.warn, hint: 'volume cumulé' },

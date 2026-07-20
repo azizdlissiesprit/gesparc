@@ -9,6 +9,7 @@ import { fetchLookup } from '../api/vehicles'
 import type { LookupItem, ReformeLigne, ReformeStatut } from '../types'
 import ReformeStatsCards from '../components/ReformeStatsCards'
 import ExportButton from '../components/ExportButton'
+import { tableErrorLocale } from '../utils/tableLocale'
 
 const { Title } = Typography
 
@@ -49,7 +50,7 @@ export default function ReformesPage() {
     staleTime: 60_000,
   })
 
-  const { data, isFetching } = useQuery({
+  const { data, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['reformes', { search, statut, numStruct, page, pageSize }],
     queryFn: () =>
       fetchReformes({
@@ -187,6 +188,7 @@ export default function ReformesPage() {
           loading={isFetching}
           columns={columns}
           dataSource={data?.results ?? []}
+          locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1000 }}
           pagination={{
             current: page,

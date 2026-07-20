@@ -11,7 +11,7 @@ import StatsRow, { ACCENT } from './StatTile'
 import { fmtInt } from '../charts/theme'
 
 export default function MvtStatsCards() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['mvt-stats'],
     queryFn: fetchMouvementStats,
   })
@@ -19,6 +19,8 @@ export default function MvtStatsCards() {
   return (
     <StatsRow
       loading={isLoading}
+      error={isError ? error : undefined}
+      onRetry={refetch}
       items={[
         { label: 'Mouvements', value: fmtInt(data?.total), icon: <DatabaseOutlined />, accent: ACCENT.neutral, hint: "lignes d'article" },
         { label: 'Entrées', value: fmtInt(data?.entrees), icon: <ArrowDownOutlined />, accent: ACCENT.good, hint: 'réceptions en stock' },

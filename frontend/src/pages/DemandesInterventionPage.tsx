@@ -9,6 +9,7 @@ import { fetchLookup } from '../api/vehicles'
 import type { Demande, DemandeParUgp, LookupItem } from '../types'
 import DemandeStatsCards from '../components/DemandeStatsCards'
 import ExportButton from '../components/ExportButton'
+import { tableErrorLocale } from '../utils/tableLocale'
 
 const { Title } = Typography
 
@@ -66,7 +67,7 @@ export default function DemandesInterventionPage() {
     staleTime: 60_000,
   })
 
-  const { data, isFetching } = useQuery({
+  const { data, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['demandes', { search, statut, numStruct, numParc, genre, page, pageSize }],
     queryFn: () =>
       fetchDemandes({
@@ -265,6 +266,7 @@ export default function DemandesInterventionPage() {
           loading={isFetching}
           columns={columns}
           dataSource={data?.results ?? []}
+          locale={tableErrorLocale(isError ? error : undefined, refetch)}
           scroll={{ x: 1250 }}
           pagination={{
             current: page,

@@ -11,7 +11,7 @@ import StatsRow, { ACCENT } from './StatTile'
 import { fmtInt, fmtMoneyShort } from '../charts/theme'
 
 export default function SinistreStatsCards() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['sinistre-stats'],
     queryFn: fetchSinistreStats,
   })
@@ -19,6 +19,8 @@ export default function SinistreStatsCards() {
   return (
     <StatsRow
       loading={isLoading}
+      error={isError ? error : undefined}
+      onRetry={refetch}
       items={[
         { label: 'Total sinistres', value: fmtInt(data?.total), icon: <ExclamationCircleOutlined />, accent: ACCENT.neutral, hint: 'déclarations' },
         { label: 'Ouverts', value: fmtInt(data?.ouverts), icon: <SyncOutlined />, accent: ACCENT.warn, hint: 'en cours de traitement' },
