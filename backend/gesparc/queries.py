@@ -23,6 +23,23 @@ from . import db as oracle
 # can be fixed at the source instead of quietly disappearing.
 PLAUSIBLE_MONTHLY_KM = 20_000
 
+# ---- Data-quality rule: negative fuel consumption ---------------------------
+# Consumption is not measured, it is DERIVED from a stock balance — confirmed
+# on 100 % of rows:
+#     qt_carb_cons_n = qt_carb_rest_n_1 + qt_recue_n - qt_carb_rest_n - qt_carb_ret_n
+#     (opening stock + received - closing stock - returned)
+# So it turns negative whenever closing stock exceeds opening + received, i.e.
+# fuel physically arrived but the receipt was never keyed in: 93 % of the 7 868
+# negative months record nothing received against a positive closing stock, and
+# 53 % also have no opening balance (the same missing-previous-period family as
+# the km defect). Generators are hit ~3x harder than vehicles (9.2 % vs 3.0 %),
+# consistent with bulk tanks being topped up off-book.
+#
+# Aggregates already require qt_carb_cons_n > 0; these rows are additionally
+# flagged and filterable so the underlying entries can be corrected.
+def _is_conso_anomalie(col: str = "e.qt_carb_cons_n") -> str:
+    return f"{col} < 0"
+
 # ---- Sorting ---------------------------------------------------------------
 # `order_by` is interpolated into the SQL string, so a sort key is NEVER taken
 # from the request directly. It must resolve through one of these allowlists —
@@ -1900,6 +1917,8 @@ SELECT e.annee                 AS annee,
        -- but the UI can mark it so nobody trusts its km / conso, and a data
        -- steward can filter to exactly these months to fix them at the source.
        (e.km_parc_n > """ + str(PLAUSIBLE_MONTHLY_KM) + """) AS anomalie_km,
+       -- Negative consumption: an unrecorded fuel receipt (see the note above).
+       (e.qt_carb_cons_n < 0) AS anomalie_conso,
        concat(e.num_veh, '_', e.annee, '_', e.mois) AS id
 FROM v_gesparc_exploitation e
 LEFT JOIN structure s ON s.num_struct = e.num_struct
@@ -1940,10 +1959,20 @@ def list_exploitation(
         where.append("TRIM(mv.designation) = 'GE'")
     elif categorie == "vehicule":
         where.append("COALESCE(TRIM(mv.designation), '') <> 'GE'")
-    if anomalie == "1":
-        where.append(f"e.km_parc_n > {PLAUSIBLE_MONTHLY_KM}")
-    elif anomalie == "0":
-        where.append(f"COALESCE(e.km_parc_n, 0) <= {PLAUSIBLE_MONTHLY_KM}")
+    # Data-quality lens. "1"/"0" kept as aliases for any/ok so older links work.
+    km_bad = f"e.km_parc_n > {PLAUSIBLE_MONTHLY_KM}"
+    conso_bad = _is_conso_anomalie()
+    if anomalie == "km":
+        where.append(km_bad)
+    elif anomalie == "conso":
+        where.append(conso_bad)
+    elif anomalie in ("any", "1"):
+        where.append(f"({km_bad} OR {conso_bad})")
+    elif anomalie in ("ok", "0"):
+        where.append(
+            f"COALESCE(e.km_parc_n, 0) <= {PLAUSIBLE_MONTHLY_KM}"
+            " AND COALESCE(e.qt_carb_cons_n, 0) >= 0"
+        )
 
     base = _EXPL_BASE
     if where:
@@ -1980,7 +2009,12 @@ def exploitation_stats() -> dict[str, Any]:
                      AND qt_carb_cons_n > 0
                )::numeric, 2) AS conso_mediane,
                COUNT(*) FILTER (WHERE km_parc_n > {PLAUSIBLE_MONTHLY_KM})
-                   AS mois_anomalie
+                   AS mois_km_anomalie,
+               COUNT(*) FILTER (WHERE qt_carb_cons_n < 0)
+                   AS mois_conso_negative,
+               COUNT(*) FILTER (
+                   WHERE km_parc_n > {PLAUSIBLE_MONTHLY_KM} OR qt_carb_cons_n < 0
+               ) AS mois_anomalie
         FROM v_gesparc_exploitation
         """
     )

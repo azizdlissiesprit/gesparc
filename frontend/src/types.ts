@@ -682,6 +682,8 @@ export interface Exploitation {
   categorie: string | null
   /** Month records an implausible distance — its km/conso can't be trusted. */
   anomalie_km: boolean | null
+  /** Negative consumption — a fuel receipt was never recorded. */
+  anomalie_conso: boolean | null
   id: string
 }
 
@@ -706,8 +708,10 @@ export interface ExploitationStats {
   annees: number
   /** Median monthly L/100km over plausible months. */
   conso_mediane: number | null
-  /** Months excluded from the distance figures as data-entry errors. */
+  /** Months with either defect (implausible km or negative consumption). */
   mois_anomalie: number
+  mois_km_anomalie: number
+  mois_conso_negative: number
 }
 
 export interface LigneCarburant {
