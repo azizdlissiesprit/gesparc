@@ -56,6 +56,13 @@ urlpatterns = [
     path("exploitation/stats/", views.exploitation_stats, name="exploitation-stats"),
     path("carburant/", views.carburant_list, name="carburant-list"),
     path("carburant/stats/", views.carburant_stats, name="carburant-stats"),
+    path("achats-carburant/", views.achat_carburant_list, name="achat-carb-list"),
+    path("achats-carburant/stats/", views.achat_carburant_stats, name="achat-carb-stats"),
+    path("achats-carburant/<path:reference>/", views.achat_carburant_detail, name="achat-carb-detail"),
+    path("cartes-carburant/", views.carte_carburant_list, name="carte-carb-list"),
+    path("cartes-carburant/stats/", views.carte_carburant_stats, name="carte-carb-stats"),
+    path("emprunts/", views.emprunt_list, name="emprunt-list"),
+    path("emprunts/stats/", views.emprunt_stats, name="emprunt-stats"),
     path("export/<str:resource>/", views.export_csv, name="export-csv"),
     path("lookups/<str:name>/", views.lookups, name="lookups"),
 ]

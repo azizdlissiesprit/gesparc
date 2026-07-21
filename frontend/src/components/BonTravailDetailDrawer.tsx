@@ -3,7 +3,11 @@ import { Alert, Descriptions, Drawer, Spin, Table, Tabs, Tag } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { fetchBonTravailDetail } from '../api/bonsTravail'
-import type { BonTravailDetail, BonTravailOperation } from '../types'
+import type {
+  BonTravailDetail,
+  BonTravailOperation,
+  BonTravailPieceExterne,
+} from '../types'
 
 interface Props {
   reference: string | null
@@ -35,6 +39,20 @@ const opColumns: ColumnsType<BonTravailOperation> = [
     key: 'prix_unitaire',
     width: 120,
     align: 'right',
+    render: (v) => (v == null ? '—' : fmtMoney(v as number)),
+  },
+]
+
+const pieceExtColumns: ColumnsType<BonTravailPieceExterne> = [
+  { title: 'Article', dataIndex: 'code', key: 'code', width: 130 },
+  { title: 'Désignation', dataIndex: 'designation', key: 'designation', ellipsis: true },
+  { title: 'Qté', dataIndex: 'quantite', key: 'quantite', width: 70, align: 'right', render: (v) => fmt(v) },
+  {
+    title: 'Prix unit.', dataIndex: 'prix_unitaire', key: 'prix_unitaire', width: 100, align: 'right',
+    render: (v) => (v == null ? '—' : fmtMoney(v as number)),
+  },
+  {
+    title: 'Montant TTC', dataIndex: 'montant_ttc', key: 'montant_ttc', width: 120, align: 'right',
     render: (v) => (v == null ? '—' : fmtMoney(v as number)),
   },
 ]
@@ -106,6 +124,21 @@ export default function BonTravailDetailDrawer({ reference, open, onClose }: Pro
                     dataSource={v.operations ?? []}
                     pagination={false}
                     locale={{ emptyText: 'Aucune opération enregistrée' }}
+                  />
+                ),
+              },
+              {
+                key: 'pieces_externes',
+                label: `Pièces externes (${v.pieces_externes?.length ?? 0})`,
+                children: (
+                  <Table<BonTravailPieceExterne>
+                    rowKey={(r, i) => `${r.code}-${i}`}
+                    size="small"
+                    columns={pieceExtColumns}
+                    dataSource={v.pieces_externes ?? []}
+                    pagination={false}
+                    locale={{ emptyText: 'Aucune pièce externe' }}
+                    scroll={{ x: 560 }}
                   />
                 ),
               },

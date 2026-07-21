@@ -132,6 +132,24 @@ SORTS: dict[str, dict[str, str]] = {
         "prix_unitaire": "prix_unitaire", "montant": "montant",
         "categorie": "categorie",
     },
+    "achats_carburant": {
+        "reference": "reference", "date_commande": "date_commande",
+        "fournisseur": "fournisseur", "parc": "parc", "num_marche": "num_marche",
+        "nb_articles": "nb_articles", "montant": "montant",
+        "date_livraison": "date_livraison", "statut": "statut_code",
+    },
+    "cartes_carburant": {
+        "num_caa": "num_caa", "parc": "parc", "structure": "structure",
+        "titulaire": "titulaire", "station": "station", "solde": "solde",
+        "date_octroi": "date_octroi", "date_expiration": "date_expiration",
+        "statut": "statut",
+    },
+    "emprunts": {
+        "num_emp": "num_emp", "num_plaque": "num_plaque",
+        "beneficiaire": "beneficiaire", "agent": "agent",
+        "date_debut": "date_debut", "date_fin": "date_fin",
+        "date_retour": "date_retour", "statut": "statut_code",
+    },
 }
 
 
@@ -782,6 +800,23 @@ def get_bon_travail(reference: str) -> dict[str, Any] | None:
         JOIN operation o ON o.num_op = l.num_op
         WHERE l.num_bt_int = :ref
         ORDER BY l.num_lig_bt
+        """,
+        {"ref": reference},
+    )
+    # Parts bought externally for this work order (LIGNE_ARTICLE_EXTERNE) — the
+    # external-repair cost detail the drawer previously didn't show.
+    header["pieces_externes"] = oracle.fetch_all(
+        """
+        SELECT le.num_article       AS code,
+               a.designation        AS designation,
+               le.quantite          AS quantite,
+               le.prix_unitaire     AS prix_unitaire,
+               le.tva               AS tva,
+               ROUND(COALESCE(le.quantite, 0) * COALESCE(le.prix_unitaire_ttc, 0), 3) AS montant_ttc
+        FROM ligne_article_externe le
+        LEFT JOIN article a ON a.num_article = le.num_article
+        WHERE le.num_bt_int = :ref
+        ORDER BY le.num_article
         """,
         {"ref": reference},
     )
@@ -2134,6 +2169,299 @@ def carburant_annees() -> list[dict]:
         "EXTRACT(YEAR FROM date_piece)::int AS label "
         "FROM ligne_carburant WHERE date_piece IS NOT NULL ORDER BY 1 DESC"
     )
+
+
+# ---- Achat carburant (fuel purchasing from suppliers) ----------------------
+# Header from PIECE_FOURN_CARB (supplier + parc + facturation), lines from the
+# V_GESPARC_LIGNE_FOURN_CARB view (fuel article + computed montants). Mirrors
+# the Achat (bons de commande) module, but for fuel rather than parts.
+ACHAT_CARB_STATUT_LABELS = {"livre": "Livré", "en_attente": "En attente"}
+
+_ACHAT_CARB_BASE = """
+SELECT pfc.num_piece_int                   AS reference,
+       pfc.date_piece                      AS date_commande,
+       pfc.num_fourn                       AS num_fourn,
+       f.designation                       AS fournisseur,
+       pfc.num_parc                        AS num_parc,
+       pc.designation                      AS parc,
+       pfc.num_marche                      AS num_marche,
+       pfc.date_livraison                  AS date_livraison,
+       pfc.montant_fact                    AS montant_facture,
+       pfc.date_fact                       AS date_facture,
+       pfc.montant_reglement               AS montant_reglement,
+       pfc.date_reglement                  AS date_reglement,
+       (SELECT COUNT(*) FROM v_gesparc_ligne_fourn_carb l
+        WHERE l.num_piece_int = pfc.num_piece_int)                        AS nb_articles,
+       (SELECT COALESCE(SUM(l.montant_commande), 0) FROM v_gesparc_ligne_fourn_carb l
+        WHERE l.num_piece_int = pfc.num_piece_int)                        AS montant,
+       CASE WHEN pfc.date_livraison IS NOT NULL THEN 'livre'
+            ELSE 'en_attente' END           AS statut_code
+FROM piece_fourn_carb pfc
+LEFT JOIN fournisseur f ON f.num_fourn = pfc.num_fourn
+LEFT JOIN parc pc ON pc.num_parc = pfc.num_parc
+"""
+
+
+def _decorate_achat_carb(row: dict[str, Any]) -> dict[str, Any]:
+    row["statut"] = ACHAT_CARB_STATUT_LABELS.get(
+        str(row.get("statut_code")), row.get("statut_code")
+    )
+    return row
+
+
+def list_achats_carburant(
+    *,
+    search: str | None = None,
+    num_fourn: str | None = None,
+    num_parc: str | None = None,
+    statut: str | None = None,
+    sort: str | None = None,
+    order: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> dict[str, Any]:
+    where: list[str] = []
+    params: dict[str, Any] = {}
+    if search:
+        where.append(
+            "(UPPER(pfc.num_piece_int) LIKE :search OR UPPER(f.designation) LIKE :search "
+            "OR UPPER(pfc.num_marche) LIKE :search)"
+        )
+        params["search"] = f"%{search.upper()}%"
+    if num_fourn:
+        where.append("pfc.num_fourn = :num_fourn")
+        params["num_fourn"] = num_fourn
+    if num_parc:
+        where.append("pfc.num_parc = :num_parc")
+        params["num_parc"] = num_parc
+    if statut == "livre":
+        where.append("pfc.date_livraison IS NOT NULL")
+    elif statut == "en_attente":
+        where.append("pfc.date_livraison IS NULL")
+
+    base = _ACHAT_CARB_BASE
+    if where:
+        base += " WHERE " + " AND ".join(where)
+    result = oracle.paginate(
+        base, params, page=page, page_size=page_size,
+        order_by=_order(sort, order, SORTS["achats_carburant"],
+                        "date_commande DESC NULLS LAST, reference"),
+    )
+    result["results"] = [_decorate_achat_carb(r) for r in result["results"]]
+    return result
+
+
+def achats_carburant_stats() -> dict[str, Any]:
+    row = oracle.fetch_one(
+        """
+        SELECT COUNT(*) AS total,
+               SUM(CASE WHEN date_livraison IS NOT NULL THEN 1 ELSE 0 END) AS livres,
+               SUM(CASE WHEN date_livraison IS NULL THEN 1 ELSE 0 END) AS en_attente,
+               COUNT(DISTINCT num_fourn) AS nb_fournisseurs,
+               COALESCE(SUM(montant_fact), 0) AS montant_total
+        FROM piece_fourn_carb
+        """
+    )
+    return row or {}
+
+
+def get_achat_carburant(reference: str) -> dict[str, Any] | None:
+    header = oracle.fetch_one(
+        _ACHAT_CARB_BASE + " WHERE pfc.num_piece_int = :ref", {"ref": reference}
+    )
+    if not header:
+        return None
+    _decorate_achat_carb(header)
+    header["lignes"] = oracle.fetch_all(
+        """
+        SELECT l.num_art_carb        AS code,
+               ac.designation        AS designation,
+               et.designation        AS energie,
+               l.qte_commandee       AS quantite,
+               l.prix_unitaire       AS prix_unitaire,
+               l.tva                 AS tva,
+               l.qte_livree          AS quantite_livree,
+               l.montant_commande    AS montant_ttc
+        FROM v_gesparc_ligne_fourn_carb l
+        LEFT JOIN art_carburant ac ON ac.num_art_carb = l.num_art_carb
+        LEFT JOIN energie_tab et ON et.energie = ac.energie::text
+        WHERE l.num_piece_int = :ref
+        ORDER BY l.num_art_carb
+        """,
+        {"ref": reference},
+    )
+    return header
+
+
+# ---- Cartes carburant (fuel access cards) ----------------------------------
+# CARTE_ACCES_AUTO: prepaid fuel cards, assigned to a structure/agent (rarely a
+# specific vehicle), with a balance (solde) and an expiry date. Validity is read
+# against the reference date, like visites/taxes.
+_CARTE_CARB_BASE = """
+SELECT ca.num_caa                          AS num_caa,
+       ca.num_veh                          AS num_veh,
+       ca.num_parc                         AS num_parc,
+       pc.designation                      AS parc,
+       ca.num_struct                       AS num_struct,
+       s.designation                       AS structure,
+       ca.iu                               AS iu,
+       NULLIF(TRIM(COALESCE(p.prenom, '') || ' ' || COALESCE(p.nom, '')), '') AS titulaire,
+       ca.num_sta_caa                      AS num_station,
+       st.designation                      AS station,
+       ca.solde                            AS solde,
+       ca.date_octroi                      AS date_octroi,
+       ca.date_prem_utilisation            AS date_prem_utilisation,
+       ca.date_expiration                  AS date_expiration,
+       CASE
+           WHEN ca.date_expiration IS NULL THEN 'inconnu'
+           WHEN ca.date_expiration < CURRENT_DATE THEN 'expiree'
+           WHEN ca.date_expiration < CURRENT_DATE + 30 THEN 'bientot'
+           ELSE 'valide'
+       END                                 AS statut
+FROM carte_acces_auto ca
+LEFT JOIN parc pc ON pc.num_parc = ca.num_parc
+LEFT JOIN structure s ON s.num_struct = ca.num_struct
+LEFT JOIN personnel p ON p.iu = ca.iu
+LEFT JOIN station_caa st ON st.num_sta_caa::text = ca.num_sta_caa
+"""
+
+CARTE_STATUT_CONDS = {
+    "expiree": "ca.date_expiration < CURRENT_DATE",
+    "bientot": "ca.date_expiration >= CURRENT_DATE AND ca.date_expiration < CURRENT_DATE + 30",
+    "valide": "ca.date_expiration >= CURRENT_DATE + 30",
+    "inconnu": "ca.date_expiration IS NULL",
+}
+
+
+def list_cartes_carburant(
+    *,
+    search: str | None = None,
+    num_struct: str | None = None,
+    num_parc: str | None = None,
+    statut: str | None = None,
+    sort: str | None = None,
+    order: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> dict[str, Any]:
+    where: list[str] = []
+    params: dict[str, Any] = {}
+    if search:
+        where.append(
+            "(UPPER(ca.num_caa) LIKE :search OR UPPER(s.designation) LIKE :search "
+            "OR UPPER(p.nom) LIKE :search OR UPPER(ca.num_veh) LIKE :search)"
+        )
+        params["search"] = f"%{search.upper()}%"
+    if num_struct:
+        where.append("ca.num_struct = :num_struct")
+        params["num_struct"] = num_struct
+    if num_parc:
+        where.append("ca.num_parc = :num_parc")
+        params["num_parc"] = num_parc
+    if statut in CARTE_STATUT_CONDS:
+        where.append(f"({CARTE_STATUT_CONDS[statut]})")
+
+    base = _CARTE_CARB_BASE
+    if where:
+        base += " WHERE " + " AND ".join(where)
+    return oracle.paginate(
+        base, params, page=page, page_size=page_size,
+        order_by=_order(sort, order, SORTS["cartes_carburant"],
+                        "date_expiration DESC NULLS LAST, num_caa"),
+    )
+
+
+def cartes_carburant_stats() -> dict[str, Any]:
+    row = oracle.fetch_one(
+        """
+        SELECT COUNT(*) AS total,
+               SUM(CASE WHEN date_expiration >= CURRENT_DATE + 30 THEN 1 ELSE 0 END) AS valides,
+               SUM(CASE WHEN date_expiration >= CURRENT_DATE
+                         AND date_expiration < CURRENT_DATE + 30 THEN 1 ELSE 0 END) AS bientot,
+               SUM(CASE WHEN date_expiration < CURRENT_DATE THEN 1 ELSE 0 END) AS expirees,
+               COUNT(DISTINCT num_struct) AS nb_structures
+        FROM carte_acces_auto
+        """
+    )
+    return row or {}
+
+
+# ---- Emprunts (vehicles lent to other entities) ----------------------------
+# EMPRUNT: a vehicle lent to a beneficiary (BENEF_EMPRUNT) for a period. Open
+# when date_retour is null — this is the detail behind the "emprunté" état.
+EMPRUNT_STATUT_LABELS = {"en_cours": "En cours", "retourne": "Retourné"}
+
+_EMPRUNT_BASE = """
+SELECT em.num_emp                          AS num_emp,
+       em.num_veh                          AS num_veh,
+       em.num_plaque                       AS num_plaque,
+       em.num_ben_emp                      AS num_ben_emp,
+       be.designation                      AS beneficiaire,
+       em.iu                               AS iu,
+       NULLIF(TRIM(COALESCE(p.prenom, '') || ' ' || COALESCE(p.nom, '')), '') AS agent,
+       em.date_debut                       AS date_debut,
+       em.date_fin                         AS date_fin,
+       em.date_retour                      AS date_retour,
+       CASE WHEN em.date_retour IS NULL THEN 'en_cours' ELSE 'retourne' END AS statut_code
+FROM emprunt em
+LEFT JOIN benef_emprunt be ON be.num_ben_emp = em.num_ben_emp
+LEFT JOIN personnel p ON p.iu = em.iu
+"""
+
+
+def _decorate_emprunt(row: dict[str, Any]) -> dict[str, Any]:
+    row["statut"] = EMPRUNT_STATUT_LABELS.get(
+        str(row.get("statut_code")), row.get("statut_code")
+    )
+    return row
+
+
+def list_emprunts(
+    *,
+    search: str | None = None,
+    statut: str | None = None,
+    sort: str | None = None,
+    order: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> dict[str, Any]:
+    where: list[str] = []
+    params: dict[str, Any] = {}
+    if search:
+        where.append(
+            "(UPPER(em.num_plaque) LIKE :search OR UPPER(be.designation) LIKE :search "
+            "OR UPPER(em.num_emp) LIKE :search)"
+        )
+        params["search"] = f"%{search.upper()}%"
+    if statut == "en_cours":
+        where.append("em.date_retour IS NULL")
+    elif statut == "retourne":
+        where.append("em.date_retour IS NOT NULL")
+
+    base = _EMPRUNT_BASE
+    if where:
+        base += " WHERE " + " AND ".join(where)
+    result = oracle.paginate(
+        base, params, page=page, page_size=page_size,
+        order_by=_order(sort, order, SORTS["emprunts"],
+                        "date_debut DESC NULLS LAST, num_emp"),
+    )
+    result["results"] = [_decorate_emprunt(r) for r in result["results"]]
+    return result
+
+
+def emprunts_stats() -> dict[str, Any]:
+    row = oracle.fetch_one(
+        """
+        SELECT COUNT(*) AS total,
+               SUM(CASE WHEN date_retour IS NULL THEN 1 ELSE 0 END) AS en_cours,
+               SUM(CASE WHEN date_retour IS NOT NULL THEN 1 ELSE 0 END) AS retournes,
+               COUNT(DISTINCT num_veh) AS vehicules,
+               COUNT(DISTINCT num_ben_emp) AS beneficiaires
+        FROM emprunt
+        """
+    )
+    return row or {}
 
 
 # ---- Véhicule 360 (everything about one vehicle) ---------------------------

@@ -6,6 +6,7 @@ import {
   CarOutlined,
   DashboardOutlined,
   DatabaseOutlined,
+  CreditCardOutlined,
   DollarOutlined,
   FileTextOutlined,
   HomeOutlined,
@@ -33,6 +34,9 @@ import FournisseursPage from './pages/FournisseursPage'
 import SinistresPage from './pages/SinistresPage'
 import ExploitationPage from './pages/ExploitationPage'
 import CarburantPage from './pages/CarburantPage'
+import AchatCarburantPage from './pages/AchatCarburantPage'
+import CartesCarburantPage from './pages/CartesCarburantPage'
+import EmpruntsPage from './pages/EmpruntsPage'
 import TaxesCirculationPage from './pages/TaxesCirculationPage'
 import Placeholder from './pages/Placeholder'
 import Vehicle360Page from './pages/Vehicle360Page'
@@ -55,11 +59,14 @@ const menuItems: MenuProps['items'] = [
       { key: '/assurances', label: 'Gestion des assurances' },
       { key: '/visites', label: 'Visites techniques' },
       { key: '/reformes', label: 'Gestion des réformes' },
+      { key: '/emprunts', label: 'Emprunts de véhicules' },
     ],
   },
   { key: '/exploitation', icon: <DashboardOutlined />, label: 'Exploitation' },
   { key: '/missions', icon: <FileTextOutlined />, label: 'Ordres de mission' },
   { key: '/carburant', icon: <DollarOutlined />, label: 'Carburant' },
+  { key: '/achat-carburant', icon: <ShoppingCartOutlined />, label: 'Achat carburant' },
+  { key: '/cartes-carburant', icon: <CreditCardOutlined />, label: 'Cartes carburant' },
   { key: '/achat', icon: <ShoppingCartOutlined />, label: 'Achat' },
   { key: '/receptions', icon: <InboxOutlined />, label: 'Réceptions fournisseur' },
   { key: '/stock', icon: <DatabaseOutlined />, label: 'Stock' },
@@ -163,6 +170,9 @@ export default function App() {
             <Route path="/assurances" element={<SinistresPage />} />
             <Route path="/exploitation" element={<ExploitationPage />} />
             <Route path="/carburant" element={<CarburantPage />} />
+            <Route path="/achat-carburant" element={<AchatCarburantPage />} />
+            <Route path="/cartes-carburant" element={<CartesCarburantPage />} />
+            <Route path="/emprunts" element={<EmpruntsPage />} />
             <Route path="/taxes" element={<TaxesCirculationPage />} />
             <Route path="*" element={<Placeholder />} />
           </Routes>

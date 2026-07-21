@@ -230,6 +230,7 @@ export interface BonTravailDetail extends BonTravail {
   num_reglement: string | null
   date_reglement: string | null
   operations: BonTravailOperation[]
+  pieces_externes?: BonTravailPieceExterne[]
 }
 
 export interface Demande {
@@ -807,4 +808,131 @@ export interface Vehicle360 {
   carburant: LigneCarburant[]
   exploitation: Exploitation[]
   limite: number
+}
+
+// ---- Achat carburant (fuel purchasing) -------------------------------------
+export interface AchatCarburant {
+  reference: string
+  date_commande: string | null
+  num_fourn: string | null
+  fournisseur: string | null
+  num_parc: string | null
+  parc: string | null
+  num_marche: string | null
+  date_livraison: string | null
+  montant_facture: number | null
+  date_facture: string | null
+  montant_reglement: number | null
+  date_reglement: string | null
+  nb_articles: number | null
+  montant: number | null
+  statut_code: string | null
+  statut: string | null
+}
+export interface AchatCarburantLigne {
+  code: number | null
+  designation: string | null
+  energie: string | null
+  quantite: number | null
+  prix_unitaire: number | null
+  tva: number | null
+  quantite_livree: number | null
+  montant_ttc: number | null
+}
+export interface AchatCarburantDetail extends AchatCarburant {
+  lignes: AchatCarburantLigne[]
+}
+export interface AchatCarburantQuery {
+  search?: string
+  num_fourn?: string
+  num_parc?: string
+  statut?: string
+  sort?: string
+  order?: 'asc' | 'desc'
+  page?: number
+  page_size?: number
+}
+export interface AchatCarburantStats {
+  total: number
+  livres: number
+  en_attente: number
+  nb_fournisseurs: number
+  montant_total: number | null
+}
+
+// ---- Cartes carburant (fuel access cards) ----------------------------------
+export interface CarteCarburant {
+  num_caa: string
+  num_veh: string | null
+  num_parc: string | null
+  parc: string | null
+  num_struct: string | null
+  structure: string | null
+  iu: string | null
+  titulaire: string | null
+  num_station: string | null
+  station: string | null
+  solde: string | null
+  date_octroi: string | null
+  date_prem_utilisation: string | null
+  date_expiration: string | null
+  statut: ValidityStatut
+}
+export interface CarteCarburantQuery {
+  search?: string
+  num_struct?: string
+  num_parc?: string
+  statut?: ValidityStatut
+  sort?: string
+  order?: 'asc' | 'desc'
+  page?: number
+  page_size?: number
+}
+export interface CarteCarburantStats {
+  total: number
+  valides: number
+  bientot: number
+  expirees: number
+  nb_structures: number
+}
+
+// ---- Emprunts (vehicle loans) ----------------------------------------------
+export interface Emprunt {
+  num_emp: string
+  num_veh: string | null
+  num_plaque: string | null
+  num_ben_emp: string | null
+  beneficiaire: string | null
+  iu: string | null
+  agent: string | null
+  date_debut: string | null
+  date_fin: string | null
+  date_retour: string | null
+  statut_code: string | null
+  statut: string | null
+}
+export interface EmpruntQuery {
+  search?: string
+  statut?: string
+  sort?: string
+  order?: 'asc' | 'desc'
+  page?: number
+  page_size?: number
+}
+export interface EmpruntStats {
+  total: number
+  en_cours: number
+  retournes: number
+  vehicules: number
+  beneficiaires: number
+}
+
+// Add external parts to the bon-de-travail detail.
+export interface BonTravailPieceExterne {
+  code: string | null
+  designation: string | null
+  quantite: number | null
+  prix_unitaire: number | null
+  tva: number | null
+  montant_ttc: number | null
 }

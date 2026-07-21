@@ -45,12 +45,23 @@ BASE_TABLES = [
     "ORDRE_MISSION", "PERSONNEL",
     # Sinistres / assurances module.
     "SINISTRE", "CAUSE_SIN", "EXPERT",
+    # Achat carburant module (fuel-purchase header: fournisseur/parc/statut).
+    "PIECE_FOURN_CARB",
+    # Cartes carburant module (fuel access cards + their station lookup).
+    "CARTE_ACCES_AUTO", "STATION_CAA",
+    # Emprunts module (vehicle loans + borrower lookup).
+    "EMPRUNT", "BENEF_EMPRUNT",
+    # Bons de travail enrichment: parts bought externally for a work order.
+    "LIGNE_ARTICLE_EXTERNE",
 ]
 # Oracle views materialized into Postgres tables of the same name.
 VIEW_TABLES = [
     "V_GESPARC_VEHICULE", "V_GESPARC_BON_TRAVAIL",
     # Achat: header + article lines with computed montants.
     "V_GESPARC_PIECE_FOURNISSEUR", "V_GESPARC_LIGNE_FOURNISSEUR",
+    # Achat carburant: fuel-purchase lines with computed montants (the header
+    # base table PIECE_FOURN_CARB is loaded above for fournisseur/parc/statut).
+    "V_GESPARC_LIGNE_FOURN_CARB",
     # Exploitation: monthly usage/fuel per vehicle (km parcourus, conso, cmck).
     "V_GESPARC_EXPLOITATION",
 ]
@@ -201,6 +212,17 @@ INDEXES = {
     # Régulation du stock / Bons de sortie / Réceptions modules
     "mouvement_stock": ["num_article", "num_parc", "type_mvt", "num_piece",
                          "num_bt_int", "num_mag", "num_benef", "nat_benef"],
+    # Achat carburant module
+    "piece_fourn_carb": ["num_piece_int", "num_fourn", "num_parc"],
+    "v_gesparc_ligne_fourn_carb": ["num_piece_int", "num_art_carb"],
+    # Cartes carburant module
+    "carte_acces_auto": ["num_caa", "num_veh", "num_struct", "num_parc", "iu"],
+    "station_caa": ["num_sta_caa"],
+    # Emprunts module
+    "emprunt": ["num_veh", "num_ben_emp", "num_plaque"],
+    "benef_emprunt": ["num_ben_emp"],
+    # Bons de travail enrichment
+    "ligne_article_externe": ["num_bt_int", "num_article"],
 }
 
 

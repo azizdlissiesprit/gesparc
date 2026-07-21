@@ -447,6 +447,72 @@ def carburant_stats(request: Request) -> Response:
 
 
 @api_view(["GET"])
+def achat_carburant_list(request: Request) -> Response:
+    data = queries.list_achats_carburant(
+        search=request.query_params.get("search") or None,
+        num_fourn=request.query_params.get("num_fourn") or None,
+        num_parc=request.query_params.get("num_parc") or None,
+        statut=request.query_params.get("statut") or None,
+        sort=request.query_params.get("sort") or None,
+        order=request.query_params.get("order") or None,
+        page=_int_param(request, "page", 1),
+        page_size=_int_param(request, "page_size", 20),
+    )
+    return Response(data)
+
+
+@api_view(["GET"])
+def achat_carburant_stats(request: Request) -> Response:
+    return Response(queries.achats_carburant_stats())
+
+
+@api_view(["GET"])
+def achat_carburant_detail(request: Request, reference: str) -> Response:
+    row = queries.get_achat_carburant(reference)
+    if row is None:
+        return Response({"detail": "Achat carburant introuvable"}, status=404)
+    return Response(row)
+
+
+@api_view(["GET"])
+def carte_carburant_list(request: Request) -> Response:
+    data = queries.list_cartes_carburant(
+        search=request.query_params.get("search") or None,
+        num_struct=request.query_params.get("num_struct") or None,
+        num_parc=request.query_params.get("num_parc") or None,
+        statut=request.query_params.get("statut") or None,
+        sort=request.query_params.get("sort") or None,
+        order=request.query_params.get("order") or None,
+        page=_int_param(request, "page", 1),
+        page_size=_int_param(request, "page_size", 20),
+    )
+    return Response(data)
+
+
+@api_view(["GET"])
+def carte_carburant_stats(request: Request) -> Response:
+    return Response(queries.cartes_carburant_stats())
+
+
+@api_view(["GET"])
+def emprunt_list(request: Request) -> Response:
+    data = queries.list_emprunts(
+        search=request.query_params.get("search") or None,
+        statut=request.query_params.get("statut") or None,
+        sort=request.query_params.get("sort") or None,
+        order=request.query_params.get("order") or None,
+        page=_int_param(request, "page", 1),
+        page_size=_int_param(request, "page_size", 20),
+    )
+    return Response(data)
+
+
+@api_view(["GET"])
+def emprunt_stats(request: Request) -> Response:
+    return Response(queries.emprunts_stats())
+
+
+@api_view(["GET"])
 def export_csv(request: Request, resource: str):
     """Stream any list as a filtered CSV — same filters as the screen."""
     try:
